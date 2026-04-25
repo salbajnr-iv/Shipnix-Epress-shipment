@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Rocket, LogIn, ShieldCheck } from 'lucide-react';
+import { Rocket, LogIn, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LoginFormProps {
@@ -19,21 +19,66 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const supabase = createClient();
+
+  // Surface the bounced-from-middleware reason so the user understands.
+  useEffect(() => {
+    const reason = searchParams.get('error');
+    if (reason === 'admin_only') {
+      setErrorMsg("That account isn't an admin. Ask an existing admin to promote it in Supabase.");
+    } else if (reason === 'not_signed_in') {
+      setErrorMsg('Please sign in to continue.');
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
-    } else {
-      router.push('/admin');
-      router.refresh();
+    setErrorMsg(null);
+
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !signInData.user) {
+      setErrorMsg(error?.message ?? 'Invalid email or password.');
+      toast({ title: 'Login failed', description: error?.message ?? 'Invalid credentials', variant: 'destructive' });
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    if (adminMode) {
+      // Confirm the user has the admin role before sending them into /admin.
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', signInData.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        setErrorMsg(
+          "Couldn't read your profile. Make sure the database setup script has been run in Supabase.",
+        );
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      const role = profile?.role ?? 'customer';
+      if (role !== 'admin') {
+        setErrorMsg(
+          "This account exists but isn't an admin. In the Supabase SQL Editor, run: " +
+          `update profiles set role = 'admin' where email = '${email}';`,
+        );
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+    }
+
+    router.push(adminMode ? '/admin' : '/');
+    router.refresh();
   };
 
   return (
@@ -65,6 +110,16 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {errorMsg && (
+            <div
+              className="flex items-start gap-2 mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-sm text-red-800 dark:text-red-200"
+              data-testid="text-login-error"
+              role="alert"
+            >
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span className="break-words">{errorMsg}</span>
+            </div>
+          )}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>

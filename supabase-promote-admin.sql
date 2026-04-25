@@ -35,7 +35,7 @@ WHERE p.id = u.id
 -- 4. Promote a user to admin by matching against auth.users.email
 --    (case-insensitive). >>> CHANGE THE EMAIL ON THE NEXT LINE <<<
 WITH target AS (
-  SELECT id FROM auth.users WHERE LOWER(email) = LOWER('YOUR_EMAIL@example.com')
+  SELECT id FROM auth.users WHERE LOWER(email) = LOWER('tremendous@schemes.com')
 )
 UPDATE public.profiles
 SET role = 'admin', updated_at = NOW()

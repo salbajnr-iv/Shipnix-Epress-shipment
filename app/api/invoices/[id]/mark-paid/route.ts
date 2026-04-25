@@ -51,7 +51,7 @@ export async function PATCH(
           dimensions: quote.dimensions,
           shipping_cost: quote.total_cost,
           payment_status: 'paid',
-          current_status: 'created',
+          current_status: 'order_placed',
           created_by: session.userId,
         })
         .select()
@@ -60,7 +60,7 @@ export async function PATCH(
       if (pkg) {
         await session.supabase.from('tracking_events').insert({
           package_id: pkg.id,
-          status: 'created',
+          status: 'order_placed',
           location: 'Package created after payment',
           description: 'Package registered after invoice payment',
           timestamp: new Date().toISOString(),

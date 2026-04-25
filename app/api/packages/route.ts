@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       ...body,
       tracking_id: trackingId,
       qr_code: qrCode,
-      current_status: body.current_status ?? 'created',
+      current_status: body.current_status ?? 'order_placed',
       created_by: session.userId,
     })
     .select()
@@ -44,9 +44,9 @@ export async function POST(req: NextRequest) {
 
   await session.supabase.from('tracking_events').insert({
     package_id: data.id,
-    status: 'created',
+    status: 'order_placed',
     location: 'Package created in system',
-    description: 'Package has been registered for shipping',
+    description: 'Order placed and being processed',
     timestamp: new Date().toISOString(),
   });
 

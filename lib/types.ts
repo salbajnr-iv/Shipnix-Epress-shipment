@@ -1,38 +1,63 @@
 export type PackageStatus =
-  | 'pending_payment' | 'created' | 'picked_up'
-  | 'in_transit' | 'out_for_delivery' | 'delivered'
-  | 'failed_delivery' | 'returned';
+  | 'order_placed' | 'packed' | 'in_transit'
+  | 'arrived_at_hub' | 'out_for_delivery'
+  | 'delivered' | 'exception';
 
 export const PACKAGE_STATUSES = {
-  PENDING_PAYMENT: 'pending_payment',
-  CREATED: 'created',
-  PICKED_UP: 'picked_up',
+  ORDER_PLACED: 'order_placed',
+  PACKED: 'packed',
   IN_TRANSIT: 'in_transit',
+  ARRIVED_AT_HUB: 'arrived_at_hub',
   OUT_FOR_DELIVERY: 'out_for_delivery',
   DELIVERED: 'delivered',
-  FAILED_DELIVERY: 'failed_delivery',
-  RETURNED: 'returned',
+  EXCEPTION: 'exception',
 } as const;
 
 /**
- * State machine for package status transitions. Maps each status to the list
- * of statuses that may follow it. Empty list = terminal state.
+ * Ordered list of statuses representing the official Shipnix Express tracking
+ * flow. The admin updates these manually from the dashboard.
  *
- * Happy path: pending_payment → created → picked_up → in_transit → out_for_delivery → delivered
- * Off-ramps: failed_delivery (retryable) and returned (terminal).
+ * Flow:
+ *  1. order_placed     – Order Placed / Processing
+ *  2. packed           – Packed / Ready to Ship
+ *  3. in_transit       – Shipped / In Transit
+ *  4. arrived_at_hub   – Arrived at Facility / Hub
+ *  5. out_for_delivery – Out for Delivery
+ *  6. delivered        – Delivered (terminal)
+ *  7. exception        – Exception / Delayed (off-ramp, recoverable)
  */
+export const PACKAGE_STATUS_FLOW: PackageStatus[] = [
+  'order_placed',
+  'packed',
+  'in_transit',
+  'arrived_at_hub',
+  'out_for_delivery',
+  'delivered',
+  'exception',
+];
+
+/**
+ * Allowed transitions between statuses. Because the admin updates statuses
+ * manually, every active stage can move to any other active stage (forward
+ * progress, corrections, or off-ramp into `exception`). `exception` can be
+ * resolved back into any active stage. `delivered` is terminal.
+ */
+const ACTIVE_STATUSES: PackageStatus[] = [
+  'order_placed', 'packed', 'in_transit',
+  'arrived_at_hub', 'out_for_delivery', 'exception',
+];
+
 export const PACKAGE_STATUS_TRANSITIONS: Record<PackageStatus, PackageStatus[]> = {
-  pending_payment: ['created'],
-  created: ['picked_up', 'returned'],
-  picked_up: ['in_transit', 'returned'],
-  in_transit: ['out_for_delivery', 'failed_delivery', 'returned'],
-  out_for_delivery: ['delivered', 'failed_delivery'],
-  failed_delivery: ['out_for_delivery', 'returned'],
-  delivered: [],
-  returned: [],
+  order_placed:     ACTIVE_STATUSES.filter(s => s !== 'order_placed').concat('delivered'),
+  packed:           ACTIVE_STATUSES.filter(s => s !== 'packed').concat('delivered'),
+  in_transit:       ACTIVE_STATUSES.filter(s => s !== 'in_transit').concat('delivered'),
+  arrived_at_hub:   ACTIVE_STATUSES.filter(s => s !== 'arrived_at_hub').concat('delivered'),
+  out_for_delivery: ACTIVE_STATUSES.filter(s => s !== 'out_for_delivery').concat('delivered'),
+  exception:        ACTIVE_STATUSES.filter(s => s !== 'exception').concat('delivered'),
+  delivered:        [],
 };
 
-export const PACKAGE_TERMINAL_STATUSES: PackageStatus[] = ['delivered', 'returned'];
+export const PACKAGE_TERMINAL_STATUSES: PackageStatus[] = ['delivered'];
 
 export const QUOTE_STATUSES = {
   PENDING: 'pending',

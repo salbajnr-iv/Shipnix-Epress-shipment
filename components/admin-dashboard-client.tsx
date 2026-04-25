@@ -48,9 +48,14 @@ export default function AdminDashboardClient() {
   const { data: stats, isLoading } = useQuery<Stats>({ queryKey: ['/api/admin/stats'] });
 
   const inTransit = (stats?.packages.byStatus.in_transit ?? 0) +
+    (stats?.packages.byStatus.arrived_at_hub ?? 0) +
     (stats?.packages.byStatus.out_for_delivery ?? 0);
   const delivered = stats?.packages.byStatus.delivered ?? 0;
-  const pending = (stats?.packages.byStatus.created ?? 0) +
+  const pending = (stats?.packages.byStatus.order_placed ?? 0) +
+    (stats?.packages.byStatus.packed ?? 0) +
+    (stats?.packages.byStatus.exception ?? 0) +
+    // Legacy statuses still counted as pending so historical packages remain visible.
+    (stats?.packages.byStatus.created ?? 0) +
     (stats?.packages.byStatus.picked_up ?? 0) +
     (stats?.packages.byStatus.pending_payment ?? 0);
 

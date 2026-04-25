@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS packages (
   scheduled_time_slot TEXT,
   delivery_price_adjustment TEXT,
   qr_code TEXT,
-  current_status TEXT NOT NULL DEFAULT 'created',
+  current_status TEXT NOT NULL DEFAULT 'order_placed',
   current_location TEXT,
   delivery_instructions TEXT,
   signature_required BOOLEAN DEFAULT FALSE,

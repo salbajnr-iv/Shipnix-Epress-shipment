@@ -7,13 +7,13 @@ import {
 } from '@/lib/types';
 
 const STATUS_DESCRIPTIONS: Record<string, string> = {
-  created: 'Package has been registered for shipping',
-  picked_up: 'Package has been picked up by courier',
-  in_transit: 'Package is on its way to destination',
-  out_for_delivery: 'Package is out for delivery',
+  order_placed: 'Order placed and being processed',
+  packed: 'Package has been packed and is ready to ship',
+  in_transit: 'Package has been shipped and is in transit',
+  arrived_at_hub: 'Package arrived at sorting facility / hub',
+  out_for_delivery: 'Package is out for delivery with the local courier',
   delivered: 'Package has been successfully delivered',
-  failed_delivery: 'Delivery attempt failed',
-  returned: 'Package is being returned to sender',
+  exception: 'Shipment has encountered an unexpected issue and may be delayed',
 };
 
 export async function PATCH(

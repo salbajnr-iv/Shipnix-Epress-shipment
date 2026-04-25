@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import LoginForm from '@/components/login-form';
 
 export const metadata = {
@@ -7,5 +8,9 @@ export const metadata = {
 };
 
 export default function AdminLoginPage() {
-  return <LoginForm adminMode />;
+  return (
+    <Suspense>
+      <LoginForm adminMode />
+    </Suspense>
+  );
 }

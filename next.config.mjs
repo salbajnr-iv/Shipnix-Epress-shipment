@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['qrcode'],
-  },
+  serverExternalPackages: ['qrcode'],
   allowedDevOrigins: ['*.replit.dev', '*.spock.replit.dev', '*.repl.co'],
   async headers() {
     return [
@@ -16,4 +14,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

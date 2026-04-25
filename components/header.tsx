@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
-import { Sun, Moon, Search, Globe, Mail, MessageCircle, Menu, X, Rocket } from 'lucide-react';
+import { Sun, Moon, Search, Globe, Mail, MessageCircle, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
@@ -62,10 +62,12 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center gap-4">
         <Link href="/" className="flex items-center gap-2.5 shrink-0 group" data-testid="link-home">
           <div className="relative">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 via-violet-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-              <Rocket className="w-5 h-5 text-white" strokeWidth={2.5} />
-            </div>
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-pulse-ring" />
+            <img
+              src="/shipnix-logo.svg"
+              alt="Shipnix Express Logo"
+              className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300"
+              data-testid="img-logo"
+            />
           </div>
           <div className="text-lg sm:text-xl font-extrabold leading-tight tracking-tight">
             <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">Shipnix</span>{' '}

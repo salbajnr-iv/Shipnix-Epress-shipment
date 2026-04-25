@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['qrcode'],
+  experimental: {
+    serverComponentsExternalPackages: ['qrcode'],
+  },
   allowedDevOrigins: ['*.replit.dev', '*.spock.replit.dev', '*.repl.co'],
   async headers() {
     return [

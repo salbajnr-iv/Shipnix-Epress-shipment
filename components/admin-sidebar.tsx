@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   FileText, CreditCard, LayoutDashboard, LogOut, Sun, Moon, Package,
-  ShieldCheck, ChevronRight, Sliders,
+  ShieldCheck, ChevronRight, Sliders, Inbox,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -27,6 +27,7 @@ const NAV_GROUPS: Array<{
       { href: '/admin/packages', label: 'Packages', icon: Package, description: 'Shipments & tracking' },
       { href: '/admin/quotes', label: 'Quotes', icon: FileText, description: 'Customer requests' },
       { href: '/admin/invoices', label: 'Invoices', icon: CreditCard, description: 'Billing & payments' },
+      { href: '/admin/messages', label: 'Messages', icon: Inbox, description: 'Contact inbox' },
     ],
   },
   {

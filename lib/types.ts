@@ -158,6 +158,27 @@ export interface Quote {
   updated_at: string;
 }
 
+export type ContactMessageStatus = 'new' | 'read' | 'replied' | 'archived';
+
+export const CONTACT_MESSAGE_STATUSES: ContactMessageStatus[] = [
+  'new',
+  'read',
+  'replied',
+  'archived',
+];
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: ContactMessageStatus;
+  admin_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Invoice {
   id: number;
   invoice_number: string;

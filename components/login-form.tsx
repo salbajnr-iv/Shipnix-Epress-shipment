@@ -25,14 +25,41 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
   const { toast } = useToast();
   const supabase = createClient();
 
-  // Surface the bounced-from-middleware reason so the user understands.
+  // If the user got bounced from /admin, look up what the server actually
+  // sees them as so we can give an actionable error.
   useEffect(() => {
     const reason = searchParams.get('error');
-    if (reason === 'admin_only') {
-      setErrorMsg("That account isn't an admin. Ask an existing admin to promote it in Supabase.");
-    } else if (reason === 'not_signed_in') {
-      setErrorMsg('Please sign in to continue.');
+    if (reason !== 'admin_only') {
+      if (reason === 'not_signed_in') setErrorMsg('Please sign in to continue.');
+      return;
     }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'include' });
+        const me = await res.json();
+        if (cancelled) return;
+        if (!me.authenticated) {
+          setErrorMsg("Your session expired. Please sign in again.");
+          return;
+        }
+        const serverEmail = me.email ?? '';
+        setErrorMsg(
+          `Server sees this account (${serverEmail}) as role "${me.role}". ` +
+          `In the Supabase SQL Editor, run:\n\n` +
+          `INSERT INTO public.profiles (id, email, role) ` +
+          `SELECT id, email, 'admin' FROM auth.users ` +
+          `WHERE LOWER(email) = LOWER('${serverEmail}') ` +
+          `ON CONFLICT (id) DO UPDATE SET role = 'admin' RETURNING id, email, role;\n\n` +
+          `Confirm it returns one row, sign out fully, then sign in again.`,
+        );
+      } catch {
+        if (!cancelled) {
+          setErrorMsg("That account isn't an admin. Promote it in Supabase, then sign in again.");
+        }
+      }
+    })();
+    return () => { cancelled = true; };
   }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -48,43 +75,10 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
       return;
     }
 
-    if (adminMode) {
-      // Verify role on the SERVER (cache: 'no-store' avoids any stale read,
-      // and the server uses fresh cookies so it sees the just-issued JWT).
-      let role: string = 'customer';
-      let serverEmail: string | null = null;
-      try {
-        const meRes = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'include' });
-        const me = await meRes.json();
-        if (!me.authenticated) {
-          setErrorMsg("Sign-in succeeded but the server can't see your session yet. Refresh the page and try again.");
-          setLoading(false);
-          return;
-        }
-        role = me.role ?? 'customer';
-        serverEmail = me.email ?? null;
-      } catch {
-        setErrorMsg("Couldn't verify your role with the server. Please retry.");
-        setLoading(false);
-        return;
-      }
-
-      if (role !== 'admin') {
-        setErrorMsg(
-          `Server sees this account (${serverEmail ?? email}) as role "${role}". ` +
-          `In the Supabase SQL Editor, run:\n\n` +
-          `INSERT INTO public.profiles (id, email, role) ` +
-          `SELECT id, email, 'admin' FROM auth.users ` +
-          `WHERE LOWER(email) = LOWER('${serverEmail ?? email}') ` +
-          `ON CONFLICT (id) DO UPDATE SET role = 'admin' RETURNING id, email, role;\n\n` +
-          `Confirm it returns one row, then sign in again.`,
-        );
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-    }
-
+    // Let the middleware handle the role check on the next navigation.
+    // If the user isn't admin, middleware will bounce back here with
+    // ?error=admin_only, and the useEffect above will then ask the server
+    // for a precise diagnostic (cookies are guaranteed set by then).
     router.push(adminMode ? '/admin' : '/');
     router.refresh();
   };

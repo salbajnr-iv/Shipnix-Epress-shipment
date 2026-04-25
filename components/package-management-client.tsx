@@ -3,15 +3,16 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Plus, QrCode, MapPin, Truck, Copy, Mail, CheckCircle2, Link2 } from 'lucide-react';
+import {
+  Package, Plus, MapPin, Truck, Copy, Mail, CheckCircle2, Link2, User, DollarSign, ArrowRight,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   type Package as PackageType,
@@ -22,22 +23,28 @@ import {
 import { formatCurrency, formatStatus } from '@/lib/utils';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending_payment: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-  created: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  picked_up: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-  in_transit: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  out_for_delivery: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
-  delivered: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  failed_delivery: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  returned: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+  pending_payment: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50',
+  created: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+  picked_up: 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-900/50',
+  in_transit: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/50',
+  out_for_delivery: 'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900/50',
+  delivered: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50',
+  failed_delivery: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50',
+  returned: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
 };
 
 function nextStatusOptions(current: string | undefined): PackageStatus[] {
   if (!current) return [];
   const allowed = PACKAGE_STATUS_TRANSITIONS[current as PackageStatus] ?? [];
-  // Always include the current status so admins can re-save with a new note/location.
   return [current as PackageStatus, ...allowed];
 }
+
+const EMPTY_FORM = {
+  sender_name: '', sender_address: '', sender_email: '', sender_phone: '',
+  recipient_name: '', recipient_address: '', recipient_email: '', recipient_phone: '',
+  package_description: '', weight: '', dimensions: '', shipping_cost: '',
+  estimated_delivery: '', payment_status: 'paid',
+};
 
 export default function PackageManagementClient() {
   const { toast } = useToast();
@@ -47,12 +54,7 @@ export default function PackageManagementClient() {
   const [createdPkg, setCreatedPkg] = useState<PackageType | null>(null);
   const [selectedPkg, setSelectedPkg] = useState<PackageType | null>(null);
   const [statusForm, setStatusForm] = useState({ status: '', location: '', description: '' });
-  const [form, setForm] = useState({
-    sender_name: '', sender_address: '', sender_email: '', sender_phone: '',
-    recipient_name: '', recipient_address: '', recipient_email: '', recipient_phone: '',
-    package_description: '', weight: '', dimensions: '', shipping_cost: '',
-    estimated_delivery: '', payment_status: 'paid',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const trackingUrlFor = (id: string) =>
     typeof window === 'undefined' ? `/track/${id}` : `${window.location.origin}/track/${id}`;
@@ -90,10 +92,7 @@ export default function PackageManagementClient() {
     onSuccess: (pkg: PackageType) => {
       qc.invalidateQueries({ queryKey: ['/api/packages'] });
       setShowCreate(false);
-      setForm({ sender_name: '', sender_address: '', sender_email: '', sender_phone: '',
-        recipient_name: '', recipient_address: '', recipient_email: '', recipient_phone: '',
-        package_description: '', weight: '', dimensions: '', shipping_cost: '',
-        estimated_delivery: '', payment_status: 'paid' });
+      setForm(EMPTY_FORM);
       setCreatedPkg(pkg);
     },
     onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
@@ -122,155 +121,261 @@ export default function PackageManagementClient() {
     statusMutation.mutate({ id: selectedPkg.id, data: statusForm });
   };
 
+  const setF = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const inTransit = packages.filter(p => p.current_status === 'in_transit' || p.current_status === 'out_for_delivery').length;
+  const delivered = packages.filter(p => p.current_status === 'delivered').length;
+
   return (
-    <div className="p-4 sm:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div className="page-shell">
+      <header className="page-header">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Package Management</h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Create packages, update status, manage tracking</p>
+          <p className="page-eyebrow">Operations</p>
+          <h1 className="page-title" data-testid="text-page-title">Package Management</h1>
+          <p className="page-subtitle">Create shipments, generate tracking IDs, and update status in real time.</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <Badge variant="outline" className="text-sm px-3 py-1">{packages.length} Packages</Badge>
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="meta-chip" data-testid="chip-total">
+            <Package className="w-3 h-3" /> {packages.length} packages
+          </span>
+          <span className="meta-chip">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> {inTransit} in transit
+          </span>
+          <span className="meta-chip">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {delivered} delivered
+          </span>
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700" data-testid="button-create-package"><Plus className="w-4 h-4 mr-2" />Create Package</Button>
+              <Button
+                className="h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md shadow-indigo-500/25 px-4"
+                data-testid="button-create-package"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />New Package
+              </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Create New Package</DialogTitle></DialogHeader>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="col-span-2 font-semibold text-sm text-blue-700 dark:text-blue-400 border-b pb-1">Sender Details</div>
-                {[['sender_name','Sender Name*'],['sender_email','Sender Email'],['sender_phone','Sender Phone']].map(([k, l]) => (
-                  <div key={k}>
-                    <Label>{l}</Label>
-                    <Input value={(form as any)[k]} onChange={e => setForm(f => ({...f,[k]:e.target.value}))} />
+            <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0">
+              <DialogHeader className="p-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+                <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white">Create New Package</DialogTitle>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  We'll generate a tracking ID and a public tracking link automatically.
+                </p>
+              </DialogHeader>
+              <div className="p-6">
+                <FormSection step={1} title="Sender Details" icon={User}>
+                  <div className="form-grid">
+                    <Field label="Sender Name *">
+                      <Input value={form.sender_name} onChange={setF('sender_name')} placeholder="Jane Doe" data-testid="input-sender-name" />
+                    </Field>
+                    <Field label="Sender Email">
+                      <Input value={form.sender_email} onChange={setF('sender_email')} placeholder="jane@company.com" data-testid="input-sender-email" />
+                    </Field>
+                    <Field label="Sender Phone" full>
+                      <Input value={form.sender_phone} onChange={setF('sender_phone')} placeholder="+1 (555) 000-0000" data-testid="input-sender-phone" />
+                    </Field>
+                    <Field label="Sender Address *" full>
+                      <Textarea value={form.sender_address} onChange={setF('sender_address')} rows={2} placeholder="Street, city, postal code" data-testid="input-sender-address" />
+                    </Field>
                   </div>
-                ))}
-                <div className="col-span-2">
-                  <Label>Sender Address*</Label>
-                  <Textarea value={form.sender_address} onChange={e => setForm(f => ({...f,sender_address:e.target.value}))} rows={2} />
-                </div>
-                <div className="col-span-2 font-semibold text-sm text-blue-700 dark:text-blue-400 border-b pb-1 mt-2">Recipient Details</div>
-                {[['recipient_name','Recipient Name*'],['recipient_email','Recipient Email'],['recipient_phone','Recipient Phone']].map(([k, l]) => (
-                  <div key={k}>
-                    <Label>{l}</Label>
-                    <Input value={(form as any)[k]} onChange={e => setForm(f => ({...f,[k]:e.target.value}))} />
+                </FormSection>
+
+                <FormSection step={2} title="Recipient Details" icon={MapPin}>
+                  <div className="form-grid">
+                    <Field label="Recipient Name *">
+                      <Input value={form.recipient_name} onChange={setF('recipient_name')} placeholder="John Smith" data-testid="input-recipient-name" />
+                    </Field>
+                    <Field label="Recipient Email">
+                      <Input value={form.recipient_email} onChange={setF('recipient_email')} placeholder="john@example.com" data-testid="input-recipient-email" />
+                    </Field>
+                    <Field label="Recipient Phone" full>
+                      <Input value={form.recipient_phone} onChange={setF('recipient_phone')} placeholder="+1 (555) 000-0000" data-testid="input-recipient-phone" />
+                    </Field>
+                    <Field label="Recipient Address *" full>
+                      <Textarea value={form.recipient_address} onChange={setF('recipient_address')} rows={2} placeholder="Street, city, postal code" data-testid="input-recipient-address" />
+                    </Field>
                   </div>
-                ))}
-                <div className="col-span-2">
-                  <Label>Recipient Address*</Label>
-                  <Textarea value={form.recipient_address} onChange={e => setForm(f => ({...f,recipient_address:e.target.value}))} rows={2} />
-                </div>
-                <div className="col-span-2 font-semibold text-sm text-blue-700 dark:text-blue-400 border-b pb-1 mt-2">Package Details</div>
-                <div className="col-span-2">
-                  <Label>Package Description*</Label>
-                  <Textarea value={form.package_description} onChange={e => setForm(f => ({...f,package_description:e.target.value}))} rows={2} />
-                </div>
-                {[['weight','Weight (kg)*'],['dimensions','Dimensions (LxWxH)'],['shipping_cost','Shipping Cost ($)*']].map(([k, l]) => (
-                  <div key={k}>
-                    <Label>{l}</Label>
-                    <Input value={(form as any)[k]} onChange={e => setForm(f => ({...f,[k]:e.target.value}))} type={k==='weight'||k==='shipping_cost'?'number':'text'} />
+                </FormSection>
+
+                <FormSection step={3} title="Package Details" icon={Package}>
+                  <div className="form-grid">
+                    <Field label="Description" full>
+                      <Textarea value={form.package_description} onChange={setF('package_description')} rows={2} placeholder="e.g. Electronics, fragile" data-testid="input-description" />
+                    </Field>
+                    <Field label="Weight (kg)">
+                      <Input type="number" value={form.weight} onChange={setF('weight')} placeholder="2.5" data-testid="input-weight" />
+                    </Field>
+                    <Field label="Dimensions">
+                      <Input value={form.dimensions} onChange={setF('dimensions')} placeholder="L x W x H" data-testid="input-dimensions" />
+                    </Field>
+                    <Field label="Shipping Cost ($) *">
+                      <Input type="number" value={form.shipping_cost} onChange={setF('shipping_cost')} placeholder="29.99" data-testid="input-shipping-cost" />
+                    </Field>
+                    <Field label="Estimated Delivery">
+                      <Input type="date" value={form.estimated_delivery} onChange={setF('estimated_delivery')} data-testid="input-estimated-delivery" />
+                    </Field>
                   </div>
-                ))}
-                <div>
-                  <Label>Estimated Delivery</Label>
-                  <Input type="date" value={form.estimated_delivery} onChange={e => setForm(f => ({...f,estimated_delivery:e.target.value}))} />
+                </FormSection>
+
+                <div className="flex gap-3 mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
+                  <Button variant="outline" onClick={() => setShowCreate(false)} className="rounded-xl h-11">Cancel</Button>
+                  <Button
+                    onClick={handleCreate}
+                    className="flex-1 h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md shadow-indigo-500/25"
+                    disabled={createMutation.isPending}
+                    data-testid="button-submit-package"
+                  >
+                    {createMutation.isPending ? 'Creating…' : 'Create Package & Generate Tracking ID'}
+                    {!createMutation.isPending && <ArrowRight className="w-4 h-4 ml-2" />}
+                  </Button>
                 </div>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <Button onClick={handleCreate} className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Creating...' : 'Create Package & Generate Tracking ID'}
-                </Button>
-                <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      </header>
 
       {isLoading ? (
-        <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : packages.length === 0 ? (
-        <Card><CardContent className="text-center py-16">
-          <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">No packages yet</h3>
-          <p className="text-muted-foreground text-sm">Create your first package to get started</p>
-        </CardContent></Card>
+        <div className="surface-card p-12 text-center">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <Package className="w-6 h-6 text-slate-400" />
+          </div>
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-1">No packages yet</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Create your first package using the button above.
+          </p>
+        </div>
       ) : (
         <div className="space-y-4">
           {packages.map((pkg) => (
-            <Card key={pkg.id} className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between flex-wrap gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <span className="font-bold text-lg text-blue-700 dark:text-blue-400">{pkg.tracking_id}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[pkg.current_status] ?? 'bg-gray-100 text-gray-800'}`}>
-                        {formatStatus(pkg.current_status)}
+            <article
+              key={pkg.id}
+              className="surface-card overflow-hidden transition-shadow hover:shadow-md"
+              data-testid={`package-${pkg.id}`}
+            >
+              <div className="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-stretch gap-5">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-1 rounded-md">
+                      {pkg.tracking_id}
+                    </span>
+                    <span className={`status-pill ${STATUS_COLORS[pkg.current_status] ?? 'bg-slate-100 text-slate-800'}`}>
+                      {formatStatus(pkg.current_status)}
+                    </span>
+                    {pkg.shipping_cost && (
+                      <span className="meta-chip">
+                        <DollarSign className="w-3 h-3" /> {formatCurrency(pkg.shipping_cost)}
                       </span>
+                    )}
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                    <div className="flex items-start gap-2">
+                      <User className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">From</p>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{pkg.sender_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{pkg.sender_address}</p>
+                      </div>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm">
-                      <div><span className="text-muted-foreground">From:</span> <span className="font-medium">{pkg.sender_name}</span></div>
-                      <div><span className="text-muted-foreground">To:</span> <span className="font-medium">{pkg.recipient_name}</span></div>
-                      <div className="text-muted-foreground truncate">{pkg.sender_address}</div>
-                      <div className="text-muted-foreground truncate">{pkg.recipient_address}</div>
-                      {pkg.package_description && <div className="col-span-2 text-muted-foreground">📦 {pkg.package_description}</div>}
-                      {pkg.shipping_cost && <div><span className="text-muted-foreground">Cost:</span> {formatCurrency(pkg.shipping_cost)}</div>}
-                      {pkg.current_location && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <MapPin className="w-3 h-3" />{pkg.current_location}
-                        </div>
-                      )}
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">To</p>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{pkg.recipient_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{pkg.recipient_address}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 items-end">
-                    {pkg.qr_code && (
-                      <img src={pkg.qr_code} alt="QR Code" className="w-16 h-16 border rounded" />
-                    )}
+
+                  {pkg.package_description && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">
+                      <Package className="w-3 h-3 inline mr-1 opacity-60" />
+                      {pkg.package_description}
+                    </p>
+                  )}
+
+                  {pkg.current_location && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-indigo-500" />
+                      <span className="font-medium">{pkg.current_location}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-row lg:flex-col items-stretch gap-3 lg:w-44 lg:border-l lg:border-slate-200 dark:lg:border-slate-800 lg:pl-5">
+                  {pkg.qr_code && (
+                    <div className="hidden sm:block p-2 bg-white border border-slate-200 dark:border-slate-700 rounded-lg flex-shrink-0">
+                      <img src={pkg.qr_code} alt="QR Code" className="w-16 h-16" />
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2 flex-1">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => { setSelectedPkg(pkg); setStatusForm({ status: pkg.current_status, location: pkg.current_location ?? '', description: '' }); setShowStatus(true); }}
+                      className="rounded-lg h-9 border-slate-300 dark:border-slate-700"
+                      onClick={() => copy(trackingUrlFor(pkg.tracking_id), 'Tracking link')}
+                      data-testid={`button-copy-link-${pkg.id}`}
                     >
-                      <Truck className="w-3 h-3 mr-1" />Update Status
+                      <Link2 className="w-3.5 h-3.5 mr-1.5" />Copy Link
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700 rounded-lg h-9"
+                      onClick={() => {
+                        setSelectedPkg(pkg);
+                        setStatusForm({ status: pkg.current_status, location: pkg.current_location ?? '', description: '' });
+                        setShowStatus(true);
+                      }}
+                      data-testid={`button-update-status-${pkg.id}`}
+                    >
+                      <Truck className="w-3.5 h-3.5 mr-1.5" />Update
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </article>
           ))}
         </div>
       )}
 
+      {/* Created package modal */}
       <Dialog open={!!createdPkg} onOpenChange={(open) => !open && setCreatedPkg(null)}>
-        <DialogContent className="max-w-lg" data-testid="dialog-tracking-created">
+        <DialogContent className="max-w-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" data-testid="dialog-tracking-created">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              Package created — share this with the recipient
+            <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              Package created
             </DialogTitle>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Share this tracking ID with the recipient.
+            </p>
           </DialogHeader>
           {createdPkg && (
             <div className="space-y-4 mt-2">
-              <div className="rounded-lg border-2 border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 p-4">
-                <p className="text-xs uppercase tracking-wide text-blue-700 dark:text-blue-300 font-semibold mb-1">
+              <div className="rounded-xl border-2 border-dashed border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-5 text-center">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400 font-semibold mb-1">
                   Tracking ID
                 </p>
-                <p className="text-2xl font-mono font-bold text-blue-900 dark:text-blue-100 break-all" data-testid="text-new-tracking-id">
+                <p className="text-2xl font-mono font-bold text-emerald-700 dark:text-emerald-400 break-all" data-testid="text-new-tracking-id">
                   {createdPkg.tracking_id}
                 </p>
                 {createdPkg.recipient_name && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    For: <span className="font-medium">{createdPkg.recipient_name}</span>
-                    {createdPkg.recipient_email && (
-                      <span className="text-xs"> · {createdPkg.recipient_email}</span>
-                    )}
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                    For <span className="font-semibold text-slate-700 dark:text-slate-300">{createdPkg.recipient_name}</span>
+                    {createdPkg.recipient_email && ` · ${createdPkg.recipient_email}`}
                   </p>
                 )}
               </div>
 
-              <div>
-                <Label className="text-xs text-muted-foreground">Public tracking link</Label>
-                <div className="flex gap-2 mt-1">
+              <div className="form-field">
+                <Label className="form-label">Public tracking link</Label>
+                <div className="flex gap-2">
                   <Input
                     readOnly
                     value={trackingUrlFor(createdPkg.tracking_id)}
@@ -282,6 +387,7 @@ export default function PackageManagementClient() {
                     type="button"
                     variant="outline"
                     size="icon"
+                    className="flex-shrink-0 h-11 w-11 rounded-lg border-slate-300 dark:border-slate-700"
                     onClick={() => copy(trackingUrlFor(createdPkg.tracking_id), 'Tracking link')}
                     title="Copy link"
                     data-testid="button-copy-link"
@@ -294,22 +400,23 @@ export default function PackageManagementClient() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Button
                   variant="outline"
+                  className="rounded-lg h-10 border-slate-300 dark:border-slate-700"
                   onClick={() => copy(createdPkg.tracking_id, 'Tracking ID')}
                   data-testid="button-copy-tracking-id"
                 >
-                  <Copy className="w-4 h-4 mr-2" />Copy Tracking ID
+                  <Copy className="w-4 h-4 mr-2" />Copy ID
                 </Button>
                 <a href={buildShareEmail(createdPkg)} className="block">
-                  <Button variant="outline" className="w-full" data-testid="button-share-email">
-                    <Mail className="w-4 h-4 mr-2" />Email to Recipient
+                  <Button variant="outline" className="w-full rounded-lg h-10 border-slate-300 dark:border-slate-700" data-testid="button-share-email">
+                    <Mail className="w-4 h-4 mr-2" />Email Recipient
                   </Button>
                 </a>
               </div>
 
-              <div className="flex gap-2 pt-2 border-t">
+              <div className="flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <Button
                   variant="ghost"
-                  className="flex-1"
+                  className="flex-1 rounded-lg h-10"
                   onClick={() => {
                     setSelectedPkg(createdPkg);
                     setStatusForm({ status: createdPkg.current_status, location: createdPkg.current_location ?? '', description: '' });
@@ -318,9 +425,13 @@ export default function PackageManagementClient() {
                   }}
                   data-testid="button-update-status-now"
                 >
-                  <Truck className="w-4 h-4 mr-2" />Update Status Now
+                  <Truck className="w-4 h-4 mr-2" />Update Status
                 </Button>
-                <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => setCreatedPkg(null)} data-testid="button-done">
+                <Button
+                  className="flex-1 rounded-lg h-10 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white"
+                  onClick={() => setCreatedPkg(null)}
+                  data-testid="button-done"
+                >
                   Done
                 </Button>
               </div>
@@ -329,16 +440,23 @@ export default function PackageManagementClient() {
         </DialogContent>
       </Dialog>
 
+      {/* Update status dialog */}
       <Dialog open={showStatus} onOpenChange={setShowStatus}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Update Package Status</DialogTitle></DialogHeader>
+        <DialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 dark:text-white">Update Package Status</DialogTitle>
+            {selectedPkg && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{selectedPkg.tracking_id}</p>
+            )}
+          </DialogHeader>
           {selectedPkg && (
-            <div className="space-y-4 mt-4">
-              <p className="text-sm text-muted-foreground">Package: <span className="font-medium">{selectedPkg.tracking_id}</span></p>
-              <div>
-                <Label>New Status</Label>
-                <Select value={statusForm.status} onValueChange={v => setStatusForm(f => ({...f,status:v}))}>
-                  <SelectTrigger data-testid="select-package-status"><SelectValue /></SelectTrigger>
+            <div className="space-y-4 mt-2">
+              <div className="form-field">
+                <Label className="form-label">New Status</Label>
+                <Select value={statusForm.status} onValueChange={v => setStatusForm(f => ({ ...f, status: v }))}>
+                  <SelectTrigger className="h-11 rounded-lg border-slate-300 dark:border-slate-700" data-testid="select-package-status">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {nextStatusOptions(selectedPkg.current_status).map(s => (
                       <SelectItem key={s} value={s} data-testid={`option-status-${s}`}>
@@ -348,29 +466,69 @@ export default function PackageManagementClient() {
                   </SelectContent>
                 </Select>
                 {PACKAGE_TERMINAL_STATUSES.includes(selectedPkg.current_status as PackageStatus) && (
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="form-help">
                     This package is in a final state. Updates will only re-stamp the current status.
                   </p>
                 )}
               </div>
-              <div>
-                <Label>Current Location</Label>
-                <Input value={statusForm.location} onChange={e => setStatusForm(f => ({...f,location:e.target.value}))} placeholder="e.g. New York Distribution Center" />
+              <div className="form-field">
+                <Label className="form-label">Current Location</Label>
+                <Input
+                  value={statusForm.location}
+                  onChange={e => setStatusForm(f => ({ ...f, location: e.target.value }))}
+                  placeholder="e.g. New York Distribution Center"
+                  data-testid="input-status-location"
+                />
               </div>
-              <div>
-                <Label>Notes</Label>
-                <Textarea value={statusForm.description} onChange={e => setStatusForm(f => ({...f,description:e.target.value}))} rows={2} />
+              <div className="form-field">
+                <Label className="form-label">Notes</Label>
+                <Textarea
+                  value={statusForm.description}
+                  onChange={e => setStatusForm(f => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  placeholder="Optional context for this update"
+                  data-testid="input-status-notes"
+                />
               </div>
-              <div className="flex gap-3">
-                <Button onClick={handleStatusUpdate} className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={statusMutation.isPending}>
-                  {statusMutation.isPending ? 'Updating...' : 'Update Status'}
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowStatus(false)} className="rounded-xl h-11">Cancel</Button>
+                <Button
+                  onClick={handleStatusUpdate}
+                  className="flex-1 h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold"
+                  disabled={statusMutation.isPending}
+                  data-testid="button-submit-status"
+                >
+                  {statusMutation.isPending ? 'Updating…' : 'Update Status'}
                 </Button>
-                <Button variant="outline" onClick={() => setShowStatus(false)}>Cancel</Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function FormSection({ step, title, icon: Icon, children }: { step: number; title: string; icon: any; children: React.ReactNode }) {
+  return (
+    <div className="form-section">
+      <div className="form-section-title">
+        <span className="form-section-step">{step}</span>
+        <div className="flex items-center gap-2">
+          <Icon className="w-4 h-4 text-indigo-600" />
+          <h3 className="form-section-heading">{title}</h3>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
+  return (
+    <div className={`form-field ${full ? 'form-grid-full' : ''}`}>
+      <Label className="form-label">{label}</Label>
+      {children}
     </div>
   );
 }

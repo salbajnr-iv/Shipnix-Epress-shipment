@@ -99,3 +99,33 @@ The app runs via the "Start application" workflow using `next dev -p 5000`.
 - Dark/light theme toggle
 - FAQ page with search
 - 7-stage delivery status tracking
+
+## Design System
+
+All public and admin pages share a single design vocabulary defined in `app/globals.css`. Use these utility classes to keep new screens consistent.
+
+**Surfaces & layout**
+- `app-shell` — the dashboard background (slate base + radial accents)
+- `page-shell` — max-width content wrapper with responsive padding
+- `page-header` / `page-eyebrow` / `page-title` / `page-subtitle` — page header pattern
+- `surface-card` / `surface-card-elevated` — solid (non-transparent) card containers
+
+**Forms**
+- `form-section` (auto-divides with siblings), `form-section-title`, `form-section-step` (numbered circles), `form-section-heading`, `form-section-sub`
+- `form-grid` (responsive 2-col grid) + `form-grid-full`, `form-field`, `form-label`, `form-help`
+
+**Auth (login/register)**
+- `auth-shell` — split layout with brand panel + form panel
+- `auth-brand-panel` — gradient brand panel with bullets
+- `auth-form-panel` / `auth-form-card` — solid form card
+
+**Data display**
+- `stat-tile` / `stat-tile-icon` / `stat-tile-value` / `stat-tile-label` / `stat-tile-meta` — dashboard stat cards
+- `status-pill` — colored pill for statuses (combine with bg/text colors)
+- `meta-chip` — small slate chip for counts/filters
+
+**Brand palette**
+- Primary gradient: `from-indigo-600 to-violet-600`
+- Status colors: emerald (success/paid), amber (pending), red (error/decline), cyan (info), indigo/violet (active/in-transit)
+- Neutrals: `slate-*` (replaces ad-hoc gray-*)
+- Hero gradients: `from-indigo-700 via-violet-700 to-cyan-600` with amber/cyan blob overlays

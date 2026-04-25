@@ -7,8 +7,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, ShieldCheck, AlertCircle } from 'lucide-react';
+import {
+  LogIn, ShieldCheck, AlertCircle, ArrowLeft, Truck, Globe2, BarChart3, Sparkles,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LoginFormProps {
@@ -25,8 +26,6 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
   const { toast } = useToast();
   const supabase = createClient();
 
-  // If the user got bounced from /admin, look up what the server actually
-  // sees them as so we can give an actionable error.
   useEffect(() => {
     const reason = searchParams.get('error');
     if (reason !== 'admin_only') {
@@ -75,85 +74,165 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
       return;
     }
 
-    // Let the middleware handle the role check on the next navigation.
-    // If the user isn't admin, middleware will bounce back here with
-    // ?error=admin_only, and the useEffect above will then ask the server
-    // for a precise diagnostic (cookies are guaranteed set by then).
     router.push(adminMode ? '/admin' : '/');
     router.refresh();
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-700 to-cyan-600">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-cyan-400/30 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl animate-float-slow" />
-      </div>
+  const highlights = adminMode
+    ? [
+        { icon: ShieldCheck, label: 'Role-based access control', sub: 'Authorized personnel only' },
+        { icon: BarChart3, label: 'Live operations dashboard', sub: 'Track every shipment in real time' },
+        { icon: Globe2, label: 'Global network visibility', sub: '220+ countries connected' },
+      ]
+    : [
+        { icon: Truck, label: 'Manage every shipment', sub: 'From pickup to delivery' },
+        { icon: BarChart3, label: 'Real-time tracking', sub: 'Live updates at every step' },
+        { icon: Globe2, label: 'Global coverage', sub: 'Trusted in 220+ countries' },
+      ];
 
-      <Card className="w-full max-w-md relative bg-white/95 dark:bg-gray-900/95 backdrop-blur border-0 shadow-2xl rounded-3xl animate-fade-in-up">
-        <CardHeader className="text-center pb-4">
-          <Link href="/" className="mx-auto mb-4 group flex justify-center">
-            <img
-              src="/shipnix-logo.svg"
-              alt="Shipnix Express"
-              className="w-14 h-14 object-contain group-hover:scale-110 transition-transform duration-300"
-              data-testid="img-logo"
-            />
+  return (
+    <div className="auth-shell">
+      {/* Brand panel */}
+      <aside className="auth-brand-panel">
+        <div className="absolute inset-0 pointer-events-none opacity-30">
+          <div className="absolute -top-32 -left-32 w-96 h-96 bg-cyan-300/40 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-0 right-0 w-[28rem] h-[28rem] bg-amber-300/30 rounded-full blur-3xl animate-float-slow" />
+        </div>
+
+        <div className="relative">
+          <Link href="/" className="inline-flex items-center gap-3 group">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur border border-white/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <img src="/shipnix-logo.svg" alt="Shipnix Express" className="w-7 h-7 brightness-0 invert" />
+            </div>
+            <div>
+              <p className="font-bold text-lg leading-tight">Shipnix Express</p>
+              <p className="text-xs text-white/70 uppercase tracking-wider">Carrier Integrations</p>
+            </div>
           </Link>
+        </div>
+
+        <div className="relative space-y-8">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur border border-white/20 px-3 py-1.5 rounded-full text-xs font-medium mb-5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              {adminMode ? 'Operations Console' : 'Customer Portal'}
+            </div>
+            <h2 className="text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight mb-4">
+              {adminMode
+                ? 'Run your global logistics from one console.'
+                : 'Ship smarter. Track everything in one place.'}
+            </h2>
+            <p className="text-white/80 leading-relaxed max-w-md">
+              {adminMode
+                ? 'Centralize quotes, packages, and invoices with a single source of truth your whole team can rely on.'
+                : 'Get instant quotes, manage shipments, and track every package in real time — all from a single dashboard.'}
+            </p>
+          </div>
+
+          <ul className="space-y-3">
+            {highlights.map(({ icon: Icon, label, sub }) => (
+              <li key={label} className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur">
+                <span className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4" />
+                </span>
+                <div>
+                  <p className="font-semibold text-sm">{label}</p>
+                  <p className="text-xs text-white/70">{sub}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative text-xs text-white/60">
+          © {new Date().getFullYear()} Shipnix Express. All rights reserved.
+        </p>
+      </aside>
+
+      {/* Form panel */}
+      <section className="auth-form-panel">
+        <div className="auth-form-card">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-indigo-600 transition-colors mb-8"
+            data-testid="link-back-home"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to homepage
+          </Link>
+
+          {/* Mobile brand */}
+          <div className="lg:hidden flex items-center gap-3 mb-6">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30">
+              <img src="/shipnix-logo.svg" alt="Shipnix Express" className="w-6 h-6 brightness-0 invert" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-white leading-tight">Shipnix Express</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Carrier Integrations</p>
+            </div>
+          </div>
+
           {adminMode && (
-            <div className="inline-flex items-center gap-1.5 mx-auto bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-xs font-medium mb-2 w-fit">
-              <ShieldCheck className="w-3 h-3" /> Admin Portal
+            <div className="inline-flex items-center gap-1.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-xs font-semibold mb-3">
+              <ShieldCheck className="w-3 h-3" /> Admin Portal · Restricted
             </div>
           )}
-          <CardTitle className="text-2xl font-extrabold tracking-tight">
-            {adminMode ? 'Admin Sign In' : 'Welcome back'}
-          </CardTitle>
-          <CardDescription>
+
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white" data-testid="text-page-title">
+            {adminMode ? 'Sign in to admin console' : 'Welcome back'}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 mb-7">
             {adminMode
-              ? 'Restricted access. Authorized personnel only.'
-              : 'Sign in to manage your shipments and dashboard.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+              ? 'Use your admin credentials to access the operations console.'
+              : 'Sign in to manage your shipments, quotes, and invoices.'}
+          </p>
+
           {errorMsg && (
             <div
-              className="flex items-start gap-2 mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-sm text-red-800 dark:text-red-200"
+              className="flex items-start gap-2.5 mb-5 p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-sm text-red-800 dark:text-red-200"
               data-testid="text-login-error"
               role="alert"
             >
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span className="break-words">{errorMsg}</span>
+              <span className="break-words whitespace-pre-line">{errorMsg}</span>
             </div>
           )}
+
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+            <div className="form-field">
+              <Label htmlFor="email" className="form-label">Email address</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="rounded-xl h-11"
                 required
                 data-testid="input-email"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+            <div className="form-field">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="form-label">Password</Label>
+                {!adminMode && (
+                  <Link href="#" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="rounded-xl h-11"
+                placeholder="Enter your password"
                 required
                 data-testid="input-password"
               />
             </div>
+
             <Button
               type="submit"
-              className="w-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white py-6 font-semibold shadow-lg shadow-indigo-500/30 hover:scale-[1.01] transition-all"
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 transition-all"
               disabled={loading}
               data-testid="button-submit"
             >
@@ -161,19 +240,17 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
               {loading ? 'Signing in…' : 'Sign In'}
             </Button>
           </form>
+
           {!adminMode && (
-            <p className="text-center text-sm text-muted-foreground mt-5">
+            <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
               Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-indigo-600 hover:text-indigo-700 font-medium hover:underline">
-                Register
+              <Link href="/register" className="text-indigo-600 hover:text-indigo-700 font-semibold" data-testid="link-register">
+                Create an account
               </Link>
             </p>
           )}
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            <Link href="/" className="hover:text-indigo-600 transition-colors">← Back to homepage</Link>
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

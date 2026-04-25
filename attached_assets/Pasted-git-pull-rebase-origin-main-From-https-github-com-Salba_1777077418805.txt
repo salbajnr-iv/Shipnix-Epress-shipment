@@ -1,0 +1,245 @@
+git pull --rebase origin main
+From https://github.com/Salbajnr/Shipnix-Epress
+ * branch            main       -> FETCH_HEAD
+Current branch main is up to date.
+~/workspace$ git pull --rebase origin main
+From https://github.com/Salbajnr/Shipnix-Epress
+ * branch            main       -> FETCH_HEAD
+Current branch main is up to date.
+~/workspace$ git push origin main
+batch response: This repository exceeded its LFS budget. The account responsible for the budget should increase it to restore access.
+error: failed to push some refs to 'https://github.com/Salbajnr/Shipnix-Epress'
+~/workspace$ ^C
+~/workspace$ git rm --cached -r .next
+git add .gitignore .gitattributes
+git commit -m "Remove .next build cache from git, stop LFS tracking"
+git push origin main
+rm '.next/app-build-manifest.json'
+rm '.next/build-manifest.json'
+rm '.next/cache/.tsbuildinfo'
+rm '.next/cache/config.json'
+rm '.next/cache/webpack/client-development/0.pack.gz'
+rm '.next/cache/webpack/client-development/1.pack.gz'
+rm '.next/cache/webpack/client-development/2.pack.gz'
+rm '.next/cache/webpack/client-development/3.pack.gz'
+rm '.next/cache/webpack/client-development/4.pack.gz'
+rm '.next/cache/webpack/client-development/5.pack.gz'
+rm '.next/cache/webpack/client-development/6.pack.gz'
+rm '.next/cache/webpack/client-development/7.pack.gz'
+rm '.next/cache/webpack/client-development/index.pack.gz'
+rm '.next/cache/webpack/client-development/index.pack.gz.old'
+rm '.next/cache/webpack/client-production/0.pack'
+rm '.next/cache/webpack/client-production/1.pack'
+rm '.next/cache/webpack/client-production/2.pack'
+rm '.next/cache/webpack/client-production/3.pack'
+rm '.next/cache/webpack/client-production/index.pack'
+rm '.next/cache/webpack/client-production/index.pack.old'
+rm '.next/cache/webpack/edge-server-development/0.pack.gz'
+rm '.next/cache/webpack/edge-server-development/1.pack.gz'
+rm '.next/cache/webpack/edge-server-development/index.pack.gz'
+rm '.next/cache/webpack/edge-server-development/index.pack.gz.old'
+rm '.next/cache/webpack/edge-server-production/0.pack'
+rm '.next/cache/webpack/edge-server-production/index.pack'
+rm '.next/cache/webpack/server-development/0.pack.gz'
+rm '.next/cache/webpack/server-development/1.pack.gz'
+rm '.next/cache/webpack/server-development/2.pack.gz'
+rm '.next/cache/webpack/server-development/3.pack.gz'
+rm '.next/cache/webpack/server-development/4.pack.gz'
+rm '.next/cache/webpack/server-development/5.pack.gz'
+rm '.next/cache/webpack/server-development/6.pack.gz'
+rm '.next/cache/webpack/server-development/index.pack.gz'
+rm '.next/cache/webpack/server-development/index.pack.gz.old'
+rm '.next/cache/webpack/server-production/0.pack'
+rm '.next/cache/webpack/server-production/1.pack'
+rm '.next/cache/webpack/server-production/index.pack'
+rm '.next/cache/webpack/server-production/index.pack.old'
+rm '.next/package.json'
+rm '.next/react-loadable-manifest.json'
+rm '.next/server/app-paths-manifest.json'
+rm '.next/server/app/_not-found/page.js'
+rm '.next/server/app/_not-found/page_client-reference-manifest.js'
+rm '.next/server/app/page.js'
+rm '.next/server/app/page_client-reference-manifest.js'
+rm '.next/server/app/track/[id]/page_client-reference-manifest.js'
+rm '.next/server/edge-runtime-webpack.js'
+rm '.next/server/interception-route-rewrite-manifest.js'
+rm '.next/server/middleware-build-manifest.js'
+rm '.next/server/middleware-manifest.json'
+rm '.next/server/middleware-react-loadable-manifest.js'
+rm '.next/server/middleware.js'
+rm '.next/server/next-font-manifest.js'
+rm '.next/server/next-font-manifest.json'
+rm '.next/server/pages-manifest.json'
+rm '.next/server/server-reference-manifest.js'
+rm '.next/server/server-reference-manifest.json'
+rm '.next/server/static/webpack/633457081244afec._.hot-update.json'
+rm '.next/server/vendor-chunks/@radix-ui.js'
+rm '.next/server/vendor-chunks/@swc.js'
+rm '.next/server/vendor-chunks/@tanstack.js'
+rm '.next/server/vendor-chunks/class-variance-authority.js'
+rm '.next/server/vendor-chunks/clsx.js'
+rm '.next/server/vendor-chunks/lucide-react.js'
+rm '.next/server/vendor-chunks/next-themes.js'
+rm '.next/server/vendor-chunks/next.js'
+rm '.next/server/vendor-chunks/tailwind-merge.js'
+rm '.next/server/webpack-runtime.js'
+rm '.next/static/chunks/app-pages-internals.js'
+rm '.next/static/chunks/app/_not-found/page.js'
+rm '.next/static/chunks/app/layout.js'
+rm '.next/static/chunks/app/page.js'
+rm '.next/static/chunks/main-app.js'
+rm '.next/static/chunks/polyfills.js'
+rm '.next/static/chunks/webpack.js'
+rm '.next/static/css/app/layout.css'
+rm '.next/static/development/_buildManifest.js'
+rm '.next/static/development/_ssgManifest.js'
+rm '.next/static/media/19cfc7226ec3afaa-s.woff2'
+rm '.next/static/media/21350d82a1f187e9-s.woff2'
+rm '.next/static/media/8e9860b6e62d6359-s.woff2'
+rm '.next/static/media/ba9851c3c22cd980-s.woff2'
+rm '.next/static/media/c5fe6dc8356a8c31-s.woff2'
+rm '.next/static/media/df0a9ae256c0569c-s.woff2'
+rm '.next/static/media/e4af272ccee01ff0-s.p.woff2'
+rm '.next/static/webpack/2b283ccc20005252.webpack.hot-update.json'
+rm '.next/static/webpack/633457081244afec._.hot-update.json'
+rm '.next/static/webpack/73f8ecfdc2fe371b.webpack.hot-update.json'
+rm '.next/static/webpack/app/layout.2b283ccc20005252.hot-update.js'
+rm '.next/static/webpack/app/layout.73f8ecfdc2fe371b.hot-update.js'
+rm '.next/static/webpack/app/layout.de891d263610f340.hot-update.js'
+rm '.next/static/webpack/app/layout.dfb13dc539f820aa.hot-update.js'
+rm '.next/static/webpack/app/layout.fa617e12f3cb06a8.hot-update.js'
+rm '.next/static/webpack/app/page.2b283ccc20005252.hot-update.js'
+rm '.next/static/webpack/app/page.73f8ecfdc2fe371b.hot-update.js'
+rm '.next/static/webpack/app/page.fa617e12f3cb06a8.hot-update.js'
+rm '.next/static/webpack/de891d263610f340.webpack.hot-update.json'
+rm '.next/static/webpack/dfb13dc539f820aa.webpack.hot-update.json'
+rm '.next/static/webpack/e6b964fd1fa0fd88.webpack.hot-update.json'
+rm '.next/static/webpack/fa617e12f3cb06a8.webpack.hot-update.json'
+rm '.next/static/webpack/webpack.2b283ccc20005252.hot-update.js'
+rm '.next/static/webpack/webpack.73f8ecfdc2fe371b.hot-update.js'
+rm '.next/static/webpack/webpack.de891d263610f340.hot-update.js'
+rm '.next/static/webpack/webpack.dfb13dc539f820aa.hot-update.js'
+rm '.next/static/webpack/webpack.e6b964fd1fa0fd88.hot-update.js'
+rm '.next/static/webpack/webpack.fa617e12f3cb06a8.hot-update.js'
+rm '.next/trace'
+rm '.next/types/app/layout.ts'
+rm '.next/types/app/page.ts'
+rm '.next/types/app/track/[id]/page.ts'
+rm '.next/types/package.json'
+[main bee9dd0] Remove .next build cache from git, stop LFS tracking
+ 112 files changed, 17426 deletions(-)
+ delete mode 100644 .next/app-build-manifest.json
+ delete mode 100644 .next/build-manifest.json
+ delete mode 100644 .next/cache/.tsbuildinfo
+ delete mode 100644 .next/cache/config.json
+ delete mode 100644 .next/cache/webpack/client-development/0.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/1.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/2.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/3.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/4.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/5.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/6.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/7.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/index.pack.gz
+ delete mode 100644 .next/cache/webpack/client-development/index.pack.gz.old
+ delete mode 100644 .next/cache/webpack/client-production/0.pack
+ delete mode 100644 .next/cache/webpack/client-production/1.pack
+ delete mode 100644 .next/cache/webpack/client-production/2.pack
+ delete mode 100644 .next/cache/webpack/client-production/3.pack
+ delete mode 100644 .next/cache/webpack/client-production/index.pack
+ delete mode 100644 .next/cache/webpack/client-production/index.pack.old
+ delete mode 100644 .next/cache/webpack/edge-server-development/0.pack.gz
+ delete mode 100644 .next/cache/webpack/edge-server-development/1.pack.gz
+ delete mode 100644 .next/cache/webpack/edge-server-development/index.pack.gz
+ delete mode 100644 .next/cache/webpack/edge-server-development/index.pack.gz.old
+ delete mode 100644 .next/cache/webpack/edge-server-production/0.pack
+ delete mode 100644 .next/cache/webpack/edge-server-production/index.pack
+ delete mode 100644 .next/cache/webpack/server-development/0.pack.gz
+ delete mode 100644 .next/cache/webpack/server-development/1.pack.gz
+ delete mode 100644 .next/cache/webpack/server-development/2.pack.gz
+ delete mode 100644 .next/cache/webpack/server-development/3.pack.gz
+ delete mode 100644 .next/cache/webpack/server-development/4.pack.gz
+ delete mode 100644 .next/cache/webpack/server-development/5.pack.gz
+ delete mode 100644 .next/cache/webpack/server-development/6.pack.gz
+ delete mode 100644 .next/cache/webpack/server-development/index.pack.gz
+ delete mode 100644 .next/cache/webpack/server-development/index.pack.gz.old
+ delete mode 100644 .next/cache/webpack/server-production/0.pack
+ delete mode 100644 .next/cache/webpack/server-production/1.pack
+ delete mode 100644 .next/cache/webpack/server-production/index.pack
+ delete mode 100644 .next/cache/webpack/server-production/index.pack.old
+ delete mode 100644 .next/package.json
+ delete mode 100644 .next/react-loadable-manifest.json
+ delete mode 100644 .next/server/app-paths-manifest.json
+ delete mode 100644 .next/server/app/_not-found/page.js
+ delete mode 100644 .next/server/app/_not-found/page_client-reference-manifest.js
+ delete mode 100644 .next/server/app/page.js
+ delete mode 100644 .next/server/app/page_client-reference-manifest.js
+ delete mode 100644 .next/server/app/track/[id]/page_client-reference-manifest.js
+ delete mode 100644 .next/server/edge-runtime-webpack.js
+ delete mode 100644 .next/server/interception-route-rewrite-manifest.js
+ delete mode 100644 .next/server/middleware-build-manifest.js
+ delete mode 100644 .next/server/middleware-manifest.json
+ delete mode 100644 .next/server/middleware-react-loadable-manifest.js
+ delete mode 100644 .next/server/middleware.js
+ delete mode 100644 .next/server/next-font-manifest.js
+ delete mode 100644 .next/server/next-font-manifest.json
+ delete mode 100644 .next/server/pages-manifest.json
+ delete mode 100644 .next/server/server-reference-manifest.js
+ delete mode 100644 .next/server/server-reference-manifest.json
+ delete mode 100644 .next/server/static/webpack/633457081244afec._.hot-update.json
+ delete mode 100644 .next/server/vendor-chunks/@radix-ui.js
+ delete mode 100644 .next/server/vendor-chunks/@swc.js
+ delete mode 100644 .next/server/vendor-chunks/@tanstack.js
+ delete mode 100644 .next/server/vendor-chunks/class-variance-authority.js
+ delete mode 100644 .next/server/vendor-chunks/clsx.js
+ delete mode 100644 .next/server/vendor-chunks/lucide-react.js
+ delete mode 100644 .next/server/vendor-chunks/next-themes.js
+ delete mode 100644 .next/server/vendor-chunks/next.js
+ delete mode 100644 .next/server/vendor-chunks/tailwind-merge.js
+ delete mode 100644 .next/server/webpack-runtime.js
+ delete mode 100644 .next/static/chunks/app-pages-internals.js
+ delete mode 100644 .next/static/chunks/app/_not-found/page.js
+ delete mode 100644 .next/static/chunks/app/layout.js
+ delete mode 100644 .next/static/chunks/app/page.js
+ delete mode 100644 .next/static/chunks/main-app.js
+ delete mode 100644 .next/static/chunks/polyfills.js
+ delete mode 100644 .next/static/chunks/webpack.js
+ delete mode 100644 .next/static/css/app/layout.css
+ delete mode 100644 .next/static/development/_buildManifest.js
+ delete mode 100644 .next/static/development/_ssgManifest.js
+ delete mode 100644 .next/static/media/19cfc7226ec3afaa-s.woff2
+ delete mode 100644 .next/static/media/21350d82a1f187e9-s.woff2
+ delete mode 100644 .next/static/media/8e9860b6e62d6359-s.woff2
+ delete mode 100644 .next/static/media/ba9851c3c22cd980-s.woff2
+ delete mode 100644 .next/static/media/c5fe6dc8356a8c31-s.woff2
+ delete mode 100644 .next/static/media/df0a9ae256c0569c-s.woff2
+ delete mode 100644 .next/static/media/e4af272ccee01ff0-s.p.woff2
+ delete mode 100644 .next/static/webpack/2b283ccc20005252.webpack.hot-update.json
+ delete mode 100644 .next/static/webpack/633457081244afec._.hot-update.json
+ delete mode 100644 .next/static/webpack/73f8ecfdc2fe371b.webpack.hot-update.json
+ delete mode 100644 .next/static/webpack/app/layout.2b283ccc20005252.hot-update.js
+ delete mode 100644 .next/static/webpack/app/layout.73f8ecfdc2fe371b.hot-update.js
+ delete mode 100644 .next/static/webpack/app/layout.de891d263610f340.hot-update.js
+ delete mode 100644 .next/static/webpack/app/layout.dfb13dc539f820aa.hot-update.js
+ delete mode 100644 .next/static/webpack/app/layout.fa617e12f3cb06a8.hot-update.js
+ delete mode 100644 .next/static/webpack/app/page.2b283ccc20005252.hot-update.js
+ delete mode 100644 .next/static/webpack/app/page.73f8ecfdc2fe371b.hot-update.js
+ delete mode 100644 .next/static/webpack/app/page.fa617e12f3cb06a8.hot-update.js
+ delete mode 100644 .next/static/webpack/de891d263610f340.webpack.hot-update.json
+ delete mode 100644 .next/static/webpack/dfb13dc539f820aa.webpack.hot-update.json
+ delete mode 100644 .next/static/webpack/e6b964fd1fa0fd88.webpack.hot-update.json
+ delete mode 100644 .next/static/webpack/fa617e12f3cb06a8.webpack.hot-update.json
+ delete mode 100644 .next/static/webpack/webpack.2b283ccc20005252.hot-update.js
+ delete mode 100644 .next/static/webpack/webpack.73f8ecfdc2fe371b.hot-update.js
+ delete mode 100644 .next/static/webpack/webpack.de891d263610f340.hot-update.js
+ delete mode 100644 .next/static/webpack/webpack.dfb13dc539f820aa.hot-update.js
+ delete mode 100644 .next/static/webpack/webpack.e6b964fd1fa0fd88.hot-update.js
+ delete mode 100644 .next/static/webpack/webpack.fa617e12f3cb06a8.hot-update.js
+ delete mode 100644 .next/trace
+ delete mode 100644 .next/types/app/layout.ts
+ delete mode 100644 .next/types/app/page.ts
+ delete mode 100644 .next/types/app/track/[id]/page.ts
+ delete mode 100644 .next/types/package.json
+batch response: This repository exceeded its LFS budget. The account responsible for the budget should increase it to restore access.
+Uploading LFS objects:   0% (0/1), 0 B | 0 B/s, done.
+error: failed to push some refs to 'https://github.com/Salbajnr/Shipnix-Epress'

@@ -27,7 +27,7 @@ Preferred communication style: Simple, everyday language.
 - `lib/utils.ts` — Utility functions
 - `middleware.ts` — Next.js middleware for auth route protection
 - `tailwind.config.ts` — Tailwind configuration
-- `next.config.cjs` — Next.js configuration
+- `next.config.mjs` — Next.js configuration (ESM; required because package.json has `"type": "module"`)
 - `supabase-setup.sql` — SQL to run in Supabase dashboard to create tables
 
 ### API Routes

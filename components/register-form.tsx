@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterForm() {
@@ -41,8 +40,13 @@ export default function RegisterForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
-            <Package className="w-7 h-7 text-white" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <img
+              src="/shipnix-logo.svg"
+              alt="Shipnix Express"
+              className="w-12 h-12 object-contain"
+              data-testid="img-logo"
+            />
           </div>
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>Get started with Shipnix-Express</CardDescription>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Package, FileText, CreditCard, LayoutDashboard, LogOut, Sun, Moon } from 'lucide-react';
+import { FileText, CreditCard, LayoutDashboard, LogOut, Sun, Moon, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from 'next-themes';
@@ -30,10 +30,13 @@ export default function AdminSidebar({ user }: { user: User }) {
   return (
     <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Package className="w-5 h-5 text-white" />
-          </div>
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg group">
+          <img
+            src="/shipnix-logo.svg"
+            alt="Shipnix Express"
+            className="w-8 h-8 object-contain group-hover:scale-110 transition-transform duration-200"
+            data-testid="img-logo-sidebar"
+          />
           <span className="text-blue-700 dark:text-blue-400">Shipnix</span>
         </Link>
         <p className="text-xs text-muted-foreground mt-1 truncate">{user.email}</p>

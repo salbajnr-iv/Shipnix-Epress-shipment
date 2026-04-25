@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Rocket, LogIn, ShieldCheck, AlertCircle } from 'lucide-react';
+import { LogIn, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LoginFormProps {
@@ -92,10 +92,13 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
 
       <Card className="w-full max-w-md relative bg-white/95 dark:bg-gray-900/95 backdrop-blur border-0 shadow-2xl rounded-3xl animate-fade-in-up">
         <CardHeader className="text-center pb-4">
-          <Link href="/" className="mx-auto mb-4 group">
-            <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 via-violet-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all">
-              <Rocket className="w-7 h-7 text-white" strokeWidth={2.5} />
-            </div>
+          <Link href="/" className="mx-auto mb-4 group flex justify-center">
+            <img
+              src="/shipnix-logo.svg"
+              alt="Shipnix Express"
+              className="w-14 h-14 object-contain group-hover:scale-110 transition-transform duration-300"
+              data-testid="img-logo"
+            />
           </Link>
           {adminMode && (
             <div className="inline-flex items-center gap-1.5 mx-auto bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-xs font-medium mb-2 w-fit">

@@ -3,6 +3,7 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['qrcode'],
   },
+  allowedDevOrigins: ['*.replit.dev', '*.spock.replit.dev', '*.repl.co'],
   async headers() {
     return [
       {

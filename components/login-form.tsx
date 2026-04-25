@@ -49,27 +49,35 @@ export default function LoginForm({ adminMode = false }: LoginFormProps) {
     }
 
     if (adminMode) {
-      // Confirm the user has the admin role before sending them into /admin.
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', signInData.user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        setErrorMsg(
-          "Couldn't read your profile. Make sure the database setup script has been run in Supabase.",
-        );
-        await supabase.auth.signOut();
+      // Verify role on the SERVER (cache: 'no-store' avoids any stale read,
+      // and the server uses fresh cookies so it sees the just-issued JWT).
+      let role: string = 'customer';
+      let serverEmail: string | null = null;
+      try {
+        const meRes = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'include' });
+        const me = await meRes.json();
+        if (!me.authenticated) {
+          setErrorMsg("Sign-in succeeded but the server can't see your session yet. Refresh the page and try again.");
+          setLoading(false);
+          return;
+        }
+        role = me.role ?? 'customer';
+        serverEmail = me.email ?? null;
+      } catch {
+        setErrorMsg("Couldn't verify your role with the server. Please retry.");
         setLoading(false);
         return;
       }
 
-      const role = profile?.role ?? 'customer';
       if (role !== 'admin') {
         setErrorMsg(
-          "This account exists but isn't an admin. In the Supabase SQL Editor, run: " +
-          `update profiles set role = 'admin' where email = '${email}';`,
+          `Server sees this account (${serverEmail ?? email}) as role "${role}". ` +
+          `In the Supabase SQL Editor, run:\n\n` +
+          `INSERT INTO public.profiles (id, email, role) ` +
+          `SELECT id, email, 'admin' FROM auth.users ` +
+          `WHERE LOWER(email) = LOWER('${serverEmail ?? email}') ` +
+          `ON CONFLICT (id) DO UPDATE SET role = 'admin' RETURNING id, email, role;\n\n` +
+          `Confirm it returns one row, then sign in again.`,
         );
         await supabase.auth.signOut();
         setLoading(false);

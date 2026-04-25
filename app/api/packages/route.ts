@@ -1,14 +1,13 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateTrackingId } from '@/lib/utils';
+import { requireAdmin } from '@/lib/auth';
 import QRCode from 'qrcode';
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
-  const { data, error } = await supabase
+  const { data, error } = await session.supabase
     .from('packages')
     .select('*')
     .order('created_at', { ascending: false })
@@ -19,9 +18,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
   const body = await req.json();
   const trackingId = generateTrackingId();
@@ -30,21 +28,21 @@ export async function POST(req: NextRequest) {
     color: { dark: '#000000', light: '#FFFFFF' },
   });
 
-  const { data, error } = await supabase
+  const { data, error } = await session.supabase
     .from('packages')
     .insert({
       ...body,
       tracking_id: trackingId,
       qr_code: qrCode,
       current_status: body.current_status ?? 'created',
-      created_by: user.id,
+      created_by: session.userId,
     })
     .select()
     .single();
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
-  await supabase.from('tracking_events').insert({
+  await session.supabase.from('tracking_events').insert({
     package_id: data.id,
     status: 'created',
     location: 'Package created in system',

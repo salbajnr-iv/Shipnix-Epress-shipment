@@ -34,10 +34,26 @@ export async function updateSession(request: NextRequest) {
   const isPublicAdmin = publicAdminRoutes.some(r => pathname === r || pathname.startsWith(r + '/'));
   const isProtected = !isPublicAdmin && protectedRoutes.some(r => pathname.startsWith(r));
 
-  if (isProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/admin/login';
-    return NextResponse.redirect(url);
+  if (isProtected) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin/login';
+      return NextResponse.redirect(url);
+    }
+
+    // Check the role for any /admin/* page.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if ((profile?.role ?? 'customer') !== 'admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      url.searchParams.set('error', 'admin_only');
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

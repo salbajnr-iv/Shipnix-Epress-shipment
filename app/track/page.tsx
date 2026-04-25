@@ -1,7 +1,14 @@
 import Header from '@/components/header';
 import PublicTrackingClient from '@/components/public-tracking-client';
 
-export const metadata = { title: 'Track Your Package - Shipnix-Express' };
+export const metadata = {
+  title: 'Track Your Shipment | Shipnix Express',
+  description: 'Real-time package tracking. Enter your Shipnix tracking ID to see live status, location, and timeline.',
+  openGraph: {
+    title: 'Track Your Shipment | Shipnix Express',
+    description: 'Real-time package tracking for Shipnix Express shipments.',
+  },
+};
 
 export default function TrackPage() {
   return (

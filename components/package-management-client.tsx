@@ -13,7 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, Plus, QrCode, MapPin, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Package as PackageType } from '@/lib/types';
+import {
+  type Package as PackageType,
+  type PackageStatus,
+  PACKAGE_STATUS_TRANSITIONS,
+  PACKAGE_TERMINAL_STATUSES,
+} from '@/lib/types';
 import { formatCurrency, formatStatus } from '@/lib/utils';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -27,7 +32,12 @@ const STATUS_COLORS: Record<string, string> = {
   returned: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
 };
 
-const STATUSES = ['created', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'failed_delivery', 'returned'];
+function nextStatusOptions(current: string | undefined): PackageStatus[] {
+  if (!current) return [];
+  const allowed = PACKAGE_STATUS_TRANSITIONS[current as PackageStatus] ?? [];
+  // Always include the current status so admins can re-save with a new note/location.
+  return [current as PackageStatus, ...allowed];
+}
 
 export default function PackageManagementClient() {
   const { toast } = useToast();
@@ -86,17 +96,17 @@ export default function PackageManagementClient() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Package Management</h1>
-          <p className="text-muted-foreground mt-1">Create packages, update status, manage tracking</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Package Management</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Create packages, update status, manage tracking</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Badge variant="outline" className="text-sm px-3 py-1">{packages.length} Packages</Badge>
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700"><Plus className="w-4 h-4 mr-2" />Create Package</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700" data-testid="button-create-package"><Plus className="w-4 h-4 mr-2" />Create Package</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Create New Package</DialogTitle></DialogHeader>
@@ -213,11 +223,20 @@ export default function PackageManagementClient() {
               <div>
                 <Label>New Status</Label>
                 <Select value={statusForm.status} onValueChange={v => setStatusForm(f => ({...f,status:v}))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger data-testid="select-package-status"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map(s => <SelectItem key={s} value={s}>{formatStatus(s)}</SelectItem>)}
+                    {nextStatusOptions(selectedPkg.current_status).map(s => (
+                      <SelectItem key={s} value={s} data-testid={`option-status-${s}`}>
+                        {formatStatus(s)}{s === selectedPkg.current_status ? ' (current)' : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {PACKAGE_TERMINAL_STATUSES.includes(selectedPkg.current_status as PackageStatus) && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This package is in a final state. Updates will only re-stamp the current status.
+                  </p>
+                )}
               </div>
               <div>
                 <Label>Current Location</Label>

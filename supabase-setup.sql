@@ -94,11 +94,54 @@ CREATE TABLE IF NOT EXISTS invoices (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Profiles table (1:1 with auth.users) — holds the role
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'admin')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Auto-create a profile row whenever a new auth.user is added
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, role)
+  VALUES (NEW.id, NEW.email, 'customer')
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Backfill profiles for users who already exist
+INSERT INTO public.profiles (id, email, role)
+SELECT id, email, 'customer' FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
 -- Row Level Security policies
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracking_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+
+-- Profiles: a user can read/update their own profile
+CREATE POLICY "Users read own profile"
+  ON profiles FOR SELECT
+  TO authenticated
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users update own profile"
+  ON profiles FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
 
 -- Allow authenticated users to manage packages
 CREATE POLICY "Authenticated users can manage packages"

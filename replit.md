@@ -31,16 +31,34 @@ Preferred communication style: Simple, everyday language.
 - `supabase-setup.sql` — SQL to run in Supabase dashboard to create tables
 
 ### API Routes
-All API routes live in `app/api/`:
-- `GET/POST /api/packages` — List & create packages
-- `GET/PATCH/DELETE /api/packages/[id]` — Single package operations
-- `PATCH /api/packages/[id]/status` — Update package status + create tracking event
-- `GET/POST /api/quotes` — List & create quotes
-- `GET/PATCH /api/quotes/[id]` — Single quote operations
-- `GET/POST /api/invoices` — List & create invoices
-- `PATCH /api/invoices/[id]/mark-paid` — Mark invoice paid + auto-create package
+All API routes live in `app/api/`. Admin routes use `requireAdmin()` from `lib/auth.ts` to check the role on the `profiles` table.
+- `GET/POST /api/packages` — List & create packages (admin)
+- `GET/PATCH/DELETE /api/packages/[id]` — Single package operations (admin)
+- `PATCH /api/packages/[id]/status` — Update status with state-machine validation + create tracking event (admin)
+- `GET /api/quotes` — List quotes (admin)
+- `POST /api/quotes` — Submit a quote request (public)
+- `GET/PATCH /api/quotes/[id]` — Single quote operations (admin)
+- `GET/POST /api/invoices` — List & create invoices (admin)
+- `PATCH /api/invoices/[id]/mark-paid` — Mark invoice paid + auto-create package (admin)
+- `GET /api/admin/stats` — Aggregated dashboard stats + recent activity (admin)
 - `GET /api/track/[id]` — Public tracking endpoint (no auth required)
 - `GET /api/auth/callback` — Supabase OAuth callback
+
+### Auth & Roles
+- `profiles` table (1:1 with `auth.users`) stores `role` (`customer` | `admin`).
+- A trigger in `supabase-setup.sql` auto-creates a `profiles` row on user signup.
+- `lib/auth.ts` exposes `requireAdmin()` and `getSessionWithRole()` for API routes.
+- `middleware.ts` redirects non-admins away from `/admin/*` pages.
+- Make a user an admin by running in Supabase SQL Editor:
+  `update profiles set role = 'admin' where email = 'you@example.com';`
+
+### Package Status State Machine
+`PACKAGE_STATUS_TRANSITIONS` in `lib/types.ts` defines which status can follow which. The `/api/packages/[id]/status` endpoint and the package management UI both enforce it. Terminal states: `delivered`, `returned`.
+
+### SEO
+- `app/sitemap.ts` and `app/robots.ts` produce `/sitemap.xml` and `/robots.txt`.
+- Set `NEXT_PUBLIC_SITE_URL` in deployment to the canonical site URL (defaults to `https://shipnix.example.com` in dev).
+- Each public page exports a unique `metadata` object; admin pages use `robots: { index: false }`.
 
 ### Pages
 - `/` — Landing page

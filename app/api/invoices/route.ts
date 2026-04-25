@@ -1,16 +1,15 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
 
 function generateInvoiceNumber() {
   return `INV-${Date.now().toString().slice(-8)}`;
 }
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
-  const { data, error } = await supabase
+  const { data, error } = await session.supabase
     .from('invoices')
     .select('*')
     .order('created_at', { ascending: false })
@@ -21,17 +20,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
   const body = await req.json();
-  const { data, error } = await supabase
+  const { data, error } = await session.supabase
     .from('invoices')
     .insert({
       ...body,
       invoice_number: generateInvoiceNumber(),
-      created_by: user.id,
+      created_by: session.userId,
     })
     .select()
     .single();

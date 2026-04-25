@@ -1,17 +1,16 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateTrackingId } from '@/lib/utils';
+import { requireAdmin } from '@/lib/auth';
 import QRCode from 'qrcode';
 
 export async function PATCH(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
-  const { data: invoice, error } = await supabase
+  const { data: invoice, error } = await session.supabase
     .from('invoices')
     .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
     .eq('id', parseInt(params.id))
@@ -21,7 +20,7 @@ export async function PATCH(
   if (error || !invoice) return NextResponse.json({ message: 'Invoice not found' }, { status: 404 });
 
   if (invoice.quote_id) {
-    const { data: quote } = await supabase
+    const { data: quote } = await session.supabase
       .from('quotes')
       .select('*')
       .eq('id', invoice.quote_id)
@@ -34,7 +33,7 @@ export async function PATCH(
         color: { dark: '#000000', light: '#FFFFFF' },
       });
 
-      const { data: pkg } = await supabase
+      const { data: pkg } = await session.supabase
         .from('packages')
         .insert({
           tracking_id: trackingId,
@@ -53,13 +52,13 @@ export async function PATCH(
           shipping_cost: quote.total_cost,
           payment_status: 'paid',
           current_status: 'created',
-          created_by: user.id,
+          created_by: session.userId,
         })
         .select()
         .single();
 
       if (pkg) {
-        await supabase.from('tracking_events').insert({
+        await session.supabase.from('tracking_events').insert({
           package_id: pkg.id,
           status: 'created',
           location: 'Package created after payment',

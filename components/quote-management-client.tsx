@@ -64,13 +64,13 @@ export default function QuoteManagementClient() {
   });
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Quote Management</h1>
-          <p className="text-muted-foreground mt-1">Review and manage shipping quotes</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Quote Management</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Review and manage shipping quotes</p>
         </div>
-        <Badge variant="outline" className="text-sm px-3 py-1">{quotes.length} Quotes</Badge>
+        <Badge variant="outline" className="text-sm px-3 py-1 self-start sm:self-auto">{quotes.length} Quotes</Badge>
       </div>
 
       {isLoading ? (

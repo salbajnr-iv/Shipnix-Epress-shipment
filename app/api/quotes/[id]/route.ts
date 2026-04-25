@@ -1,15 +1,14 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
-  const { data, error } = await supabase
+  const { data, error } = await session.supabase
     .from('quotes')
     .select('*')
     .eq('id', parseInt(params.id))
@@ -23,12 +22,11 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
   const body = await req.json();
-  const { data, error } = await supabase
+  const { data, error } = await session.supabase
     .from('quotes')
     .update({ ...body, updated_at: new Date().toISOString() })
     .eq('id', parseInt(params.id))

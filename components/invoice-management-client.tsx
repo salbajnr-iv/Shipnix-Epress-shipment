@@ -37,13 +37,13 @@ export default function InvoiceManagementClient() {
   });
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Invoice Management</h1>
-          <p className="text-muted-foreground mt-1">Track payments and billing</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Invoice Management</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Track payments and billing</p>
         </div>
-        <span className="text-sm text-muted-foreground border rounded-full px-3 py-1">{invoices.length} Invoices</span>
+        <span className="text-sm text-muted-foreground border rounded-full px-3 py-1 self-start sm:self-auto">{invoices.length} Invoices</span>
       </div>
 
       {isLoading ? (

@@ -1,7 +1,16 @@
 import Header from '@/components/header';
 import PublicTrackingClient from '@/components/public-tracking-client';
 
-export const metadata = { title: 'Track Package - Shipnix-Express' };
+export function generateMetadata({ params }: { params: { id: string } }) {
+  const id = params.id?.toUpperCase() ?? '';
+  return {
+    title: id ? `Tracking ${id} | Shipnix Express` : 'Track Package | Shipnix Express',
+    description: id
+      ? `Real-time tracking details for shipment ${id}.`
+      : 'Real-time tracking details for Shipnix Express shipments.',
+    robots: { index: false, follow: false },
+  };
+}
 
 export default function TrackByIdPage({ params }: { params: { id: string } }) {
   return (

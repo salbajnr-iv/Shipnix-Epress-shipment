@@ -1,5 +1,10 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
+import {
+  PACKAGE_STATUS_TRANSITIONS,
+  PACKAGE_STATUSES,
+  type PackageStatus,
+} from '@/lib/types';
 
 const STATUS_DESCRIPTIONS: Record<string, string> = {
   created: 'Package has been registered for shipping',
@@ -15,20 +20,43 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
   const { status, location, description } = await req.json();
 
-  const updates: any = {
+  if (!status || !Object.values(PACKAGE_STATUSES).includes(status)) {
+    return NextResponse.json({ message: 'Invalid status value' }, { status: 400 });
+  }
+
+  // Load the existing package to validate the transition.
+  const { data: existing } = await session.supabase
+    .from('packages')
+    .select('current_status')
+    .eq('id', parseInt(params.id))
+    .single();
+
+  if (!existing) {
+    return NextResponse.json({ message: 'Package not found' }, { status: 404 });
+  }
+
+  const current = existing.current_status as PackageStatus;
+  const allowed = PACKAGE_STATUS_TRANSITIONS[current] ?? [];
+  // Allow re-setting to the same status (e.g. add a note at same stage).
+  if (status !== current && !allowed.includes(status as PackageStatus)) {
+    return NextResponse.json({
+      message: `Cannot transition from "${current}" to "${status}". Allowed: ${allowed.join(', ') || 'none'}.`,
+    }, { status: 400 });
+  }
+
+  const updates: Record<string, unknown> = {
     current_status: status,
     updated_at: new Date().toISOString(),
   };
   if (location) updates.current_location = location;
   if (status === 'delivered') updates.actual_delivery = new Date().toISOString();
 
-  const { data, error } = await supabase
+  const { data, error } = await session.supabase
     .from('packages')
     .update(updates)
     .eq('id', parseInt(params.id))
@@ -37,7 +65,7 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
-  await supabase.from('tracking_events').insert({
+  await session.supabase.from('tracking_events').insert({
     package_id: parseInt(params.id),
     status,
     location: location ?? '',

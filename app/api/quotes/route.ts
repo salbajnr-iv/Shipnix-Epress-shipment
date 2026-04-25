@@ -1,16 +1,17 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
 
 function generateQuoteNumber() {
   return `QT-${Date.now().toString().slice(-8)}`;
 }
 
+// Admins can list all quotes
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session.ok) return session.response;
 
-  const { data, error } = await supabase
+  const { data, error } = await session.supabase
     .from('quotes')
     .select('*')
     .order('created_at', { ascending: false })
@@ -20,6 +21,7 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
+// POST is intentionally public — anyone can request a quote.
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const body = await req.json();

@@ -14,6 +14,26 @@ export const PACKAGE_STATUSES = {
   RETURNED: 'returned',
 } as const;
 
+/**
+ * State machine for package status transitions. Maps each status to the list
+ * of statuses that may follow it. Empty list = terminal state.
+ *
+ * Happy path: pending_payment → created → picked_up → in_transit → out_for_delivery → delivered
+ * Off-ramps: failed_delivery (retryable) and returned (terminal).
+ */
+export const PACKAGE_STATUS_TRANSITIONS: Record<PackageStatus, PackageStatus[]> = {
+  pending_payment: ['created'],
+  created: ['picked_up', 'returned'],
+  picked_up: ['in_transit', 'returned'],
+  in_transit: ['out_for_delivery', 'failed_delivery', 'returned'],
+  out_for_delivery: ['delivered', 'failed_delivery'],
+  failed_delivery: ['out_for_delivery', 'returned'],
+  delivered: [],
+  returned: [],
+};
+
+export const PACKAGE_TERMINAL_STATUSES: PackageStatus[] = ['delivered', 'returned'];
+
 export const QUOTE_STATUSES = {
   PENDING: 'pending',
   APPROVED: 'approved',

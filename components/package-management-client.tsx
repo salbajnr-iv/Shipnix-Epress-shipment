@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Plus, QrCode, MapPin, Truck } from 'lucide-react';
+import { Package, Plus, QrCode, MapPin, Truck, Copy, Mail, CheckCircle2, Link2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   type Package as PackageType,
@@ -44,6 +44,7 @@ export default function PackageManagementClient() {
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
+  const [createdPkg, setCreatedPkg] = useState<PackageType | null>(null);
   const [selectedPkg, setSelectedPkg] = useState<PackageType | null>(null);
   const [statusForm, setStatusForm] = useState({ status: '', location: '', description: '' });
   const [form, setForm] = useState({
@@ -53,6 +54,32 @@ export default function PackageManagementClient() {
     estimated_delivery: '', payment_status: 'paid',
   });
 
+  const trackingUrlFor = (id: string) =>
+    typeof window === 'undefined' ? `/track/${id}` : `${window.location.origin}/track/${id}`;
+
+  const copy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: 'Copied', description: `${label} copied to clipboard.` });
+    } catch {
+      toast({ title: 'Copy failed', description: 'Please copy it manually.', variant: 'destructive' });
+    }
+  };
+
+  const buildShareEmail = (pkg: PackageType) => {
+    const link = trackingUrlFor(pkg.tracking_id);
+    const subject = encodeURIComponent(`Your Shipnix Express tracking ID: ${pkg.tracking_id}`);
+    const body = encodeURIComponent(
+      `Hi ${pkg.recipient_name || 'there'},\n\n` +
+      `Your shipment from ${pkg.sender_name} is on its way.\n\n` +
+      `Tracking ID: ${pkg.tracking_id}\n` +
+      `Track it live: ${link}\n\n` +
+      `Thanks,\nShipnix Express`
+    );
+    const to = pkg.recipient_email ?? '';
+    return `mailto:${to}?subject=${subject}&body=${body}`;
+  };
+
   const { data: packagesRaw, isLoading } = useQuery<PackageType[]>({
     queryKey: ['/api/packages'],
   });
@@ -60,14 +87,14 @@ export default function PackageManagementClient() {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest('POST', '/api/packages', data),
-    onSuccess: (pkg) => {
-      toast({ title: 'Package Created', description: `Tracking ID: ${pkg.tracking_id}` });
+    onSuccess: (pkg: PackageType) => {
       qc.invalidateQueries({ queryKey: ['/api/packages'] });
       setShowCreate(false);
       setForm({ sender_name: '', sender_address: '', sender_email: '', sender_phone: '',
         recipient_name: '', recipient_address: '', recipient_email: '', recipient_phone: '',
         package_description: '', weight: '', dimensions: '', shipping_cost: '',
         estimated_delivery: '', payment_status: 'paid' });
+      setCreatedPkg(pkg);
     },
     onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
@@ -213,6 +240,94 @@ export default function PackageManagementClient() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!createdPkg} onOpenChange={(open) => !open && setCreatedPkg(null)}>
+        <DialogContent className="max-w-lg" data-testid="dialog-tracking-created">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              Package created — share this with the recipient
+            </DialogTitle>
+          </DialogHeader>
+          {createdPkg && (
+            <div className="space-y-4 mt-2">
+              <div className="rounded-lg border-2 border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 p-4">
+                <p className="text-xs uppercase tracking-wide text-blue-700 dark:text-blue-300 font-semibold mb-1">
+                  Tracking ID
+                </p>
+                <p className="text-2xl font-mono font-bold text-blue-900 dark:text-blue-100 break-all" data-testid="text-new-tracking-id">
+                  {createdPkg.tracking_id}
+                </p>
+                {createdPkg.recipient_name && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    For: <span className="font-medium">{createdPkg.recipient_name}</span>
+                    {createdPkg.recipient_email && (
+                      <span className="text-xs"> · {createdPkg.recipient_email}</span>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground">Public tracking link</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    readOnly
+                    value={trackingUrlFor(createdPkg.tracking_id)}
+                    className="font-mono text-xs"
+                    onFocus={(e) => e.currentTarget.select()}
+                    data-testid="input-tracking-link"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copy(trackingUrlFor(createdPkg.tracking_id), 'Tracking link')}
+                    title="Copy link"
+                    data-testid="button-copy-link"
+                  >
+                    <Link2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => copy(createdPkg.tracking_id, 'Tracking ID')}
+                  data-testid="button-copy-tracking-id"
+                >
+                  <Copy className="w-4 h-4 mr-2" />Copy Tracking ID
+                </Button>
+                <a href={buildShareEmail(createdPkg)} className="block">
+                  <Button variant="outline" className="w-full" data-testid="button-share-email">
+                    <Mail className="w-4 h-4 mr-2" />Email to Recipient
+                  </Button>
+                </a>
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedPkg(createdPkg);
+                    setStatusForm({ status: createdPkg.current_status, location: createdPkg.current_location ?? '', description: '' });
+                    setCreatedPkg(null);
+                    setShowStatus(true);
+                  }}
+                  data-testid="button-update-status-now"
+                >
+                  <Truck className="w-4 h-4 mr-2" />Update Status Now
+                </Button>
+                <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => setCreatedPkg(null)} data-testid="button-done">
+                  Done
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showStatus} onOpenChange={setShowStatus}>
         <DialogContent>

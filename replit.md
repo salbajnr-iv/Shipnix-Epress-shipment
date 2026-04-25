@@ -49,8 +49,10 @@ All API routes live in `app/api/`. Admin routes use `requireAdmin()` from `lib/a
 - A trigger in `supabase-setup.sql` auto-creates a `profiles` row on user signup.
 - `lib/auth.ts` exposes `requireAdmin()` and `getSessionWithRole()` for API routes.
 - `middleware.ts` redirects non-admins away from `/admin/*` pages.
-- Make a user an admin by running in Supabase SQL Editor:
+- **Database is locked down with Row-Level Security**: only users whose `profiles.role = 'admin'` can read or write packages, tracking events, quotes (read), and invoices. Anonymous visitors can still look up a package by tracking ID and submit a public quote request. A helper function `public.is_admin()` (SECURITY DEFINER) is used inside RLS policies to avoid recursion. Customers are blocked from changing their own role by the `WITH CHECK` clause on the profile UPDATE policy.
+- Make a user an admin by running in the Supabase SQL Editor:
   `update profiles set role = 'admin' where email = 'you@example.com';`
+- For an existing project, run `supabase-migration-rls-lockdown.sql` to apply just the RLS lockdown without re-creating tables.
 
 ### Package Status State Machine
 `PACKAGE_STATUS_TRANSITIONS` in `lib/types.ts` defines which status can follow which. The `/api/packages/[id]/status` endpoint and the package management UI both enforce it. Terminal states: `delivered`, `returned`.

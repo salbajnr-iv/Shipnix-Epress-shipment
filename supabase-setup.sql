@@ -1,5 +1,10 @@
 -- Shipnix-Express Supabase Database Setup
 -- Run this in your Supabase SQL Editor at https://app.supabase.com
+-- This script is idempotent — safe to re-run.
+
+-- =====================================================================
+-- TABLES
+-- =====================================================================
 
 -- Packages table
 CREATE TABLE IF NOT EXISTS packages (
@@ -103,6 +108,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- =====================================================================
+-- AUTH TRIGGERS
+-- =====================================================================
+
 -- Auto-create a profile row whenever a new auth.user is added
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -124,66 +133,151 @@ INSERT INTO public.profiles (id, email, role)
 SELECT id, email, 'customer' FROM auth.users
 ON CONFLICT (id) DO NOTHING;
 
--- Row Level Security policies
+-- =====================================================================
+-- ROLE HELPER
+-- =====================================================================
+-- SECURITY DEFINER so it can read profiles even when called from an RLS
+-- policy on another table (avoids infinite recursion).
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT COALESCE(
+    (SELECT role = 'admin' FROM public.profiles WHERE id = auth.uid()),
+    false
+  );
+$$;
+
+-- =====================================================================
+-- ROW LEVEL SECURITY
+-- =====================================================================
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracking_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 
--- Profiles: a user can read/update their own profile
+-- Drop any prior permissive policies so the script is idempotent.
+DROP POLICY IF EXISTS "Users read own profile" ON profiles;
+DROP POLICY IF EXISTS "Users update own profile" ON profiles;
+DROP POLICY IF EXISTS "Users update own profile (no role)" ON profiles;
+DROP POLICY IF EXISTS "Admins read all profiles" ON profiles;
+
+DROP POLICY IF EXISTS "Authenticated users can manage packages" ON packages;
+DROP POLICY IF EXISTS "Public can read packages by tracking_id" ON packages;
+DROP POLICY IF EXISTS "Admins manage packages" ON packages;
+DROP POLICY IF EXISTS "Public can read packages" ON packages;
+
+DROP POLICY IF EXISTS "Authenticated users can manage tracking events" ON tracking_events;
+DROP POLICY IF EXISTS "Public can read tracking events" ON tracking_events;
+DROP POLICY IF EXISTS "Admins manage tracking events" ON tracking_events;
+
+DROP POLICY IF EXISTS "Authenticated users can manage quotes" ON quotes;
+DROP POLICY IF EXISTS "Anyone can submit quote requests" ON quotes;
+DROP POLICY IF EXISTS "Admins read quotes" ON quotes;
+DROP POLICY IF EXISTS "Admins update quotes" ON quotes;
+DROP POLICY IF EXISTS "Admins delete quotes" ON quotes;
+DROP POLICY IF EXISTS "Anyone can insert quote requests" ON quotes;
+
+DROP POLICY IF EXISTS "Authenticated users can manage invoices" ON invoices;
+DROP POLICY IF EXISTS "Admins manage invoices" ON invoices;
+
+-- ---------------------------------------------------------------------
+-- profiles
+-- ---------------------------------------------------------------------
+-- Users can read their own profile (so the app can look up their role).
 CREATE POLICY "Users read own profile"
   ON profiles FOR SELECT
   TO authenticated
   USING (auth.uid() = id);
 
-CREATE POLICY "Users update own profile"
+-- Admins can read every profile (for user management later).
+CREATE POLICY "Admins read all profiles"
+  ON profiles FOR SELECT
+  TO authenticated
+  USING (public.is_admin());
+
+-- Users can update their own profile but CANNOT change their role
+-- (the WITH CHECK forces the new role to equal the existing one).
+CREATE POLICY "Users update own profile (no role)"
   ON profiles FOR UPDATE
   TO authenticated
   USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
+  WITH CHECK (
+    auth.uid() = id
+    AND role = (SELECT role FROM public.profiles WHERE id = auth.uid())
+  );
 
--- Allow authenticated users to manage packages
-CREATE POLICY "Authenticated users can manage packages"
+-- ---------------------------------------------------------------------
+-- packages — admins only for writes; admins + anon for reads
+-- ---------------------------------------------------------------------
+-- Public tracking lookup (the /api/track endpoint runs as anon).
+CREATE POLICY "Public can read packages"
+  ON packages FOR SELECT
+  USING (true);
+
+-- All write ops require admin.
+CREATE POLICY "Admins manage packages"
   ON packages FOR ALL
   TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
--- Allow public tracking lookup (read-only by tracking_id)
-CREATE POLICY "Public can read packages by tracking_id"
-  ON packages FOR SELECT
-  TO anon
-  USING (true);
-
--- Tracking events: authenticated full access, public read-only
-CREATE POLICY "Authenticated users can manage tracking events"
-  ON tracking_events FOR ALL
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
-
+-- ---------------------------------------------------------------------
+-- tracking_events — admins only for writes; everyone for reads
+-- ---------------------------------------------------------------------
 CREATE POLICY "Public can read tracking events"
   ON tracking_events FOR SELECT
-  TO anon
   USING (true);
 
--- Quotes: authenticated users only
-CREATE POLICY "Authenticated users can manage quotes"
-  ON quotes FOR ALL
+CREATE POLICY "Admins manage tracking events"
+  ON tracking_events FOR ALL
   TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
--- Allow anon to INSERT quotes (for public quote requests)
-CREATE POLICY "Anyone can submit quote requests"
+-- ---------------------------------------------------------------------
+-- quotes — public can submit requests (INSERT only), admins manage rest
+-- ---------------------------------------------------------------------
+CREATE POLICY "Anyone can insert quote requests"
   ON quotes FOR INSERT
-  TO anon
   WITH CHECK (true);
 
--- Invoices: authenticated users only
-CREATE POLICY "Authenticated users can manage invoices"
+CREATE POLICY "Admins read quotes"
+  ON quotes FOR SELECT
+  TO authenticated
+  USING (public.is_admin());
+
+CREATE POLICY "Admins update quotes"
+  ON quotes FOR UPDATE
+  TO authenticated
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+CREATE POLICY "Admins delete quotes"
+  ON quotes FOR DELETE
+  TO authenticated
+  USING (public.is_admin());
+
+-- ---------------------------------------------------------------------
+-- invoices — admins only, full stop
+-- ---------------------------------------------------------------------
+CREATE POLICY "Admins manage invoices"
   ON invoices FOR ALL
   TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+-- =====================================================================
+-- HOW TO PROMOTE A USER TO ADMIN
+-- =====================================================================
+-- After the user signs up, run:
+--
+--   UPDATE profiles SET role = 'admin' WHERE email = 'you@example.com';
+--
+-- Only run this from the Supabase SQL Editor (which uses the service role
+-- and bypasses RLS). Regular customers cannot promote themselves because
+-- the "Users update own profile (no role)" policy blocks role changes.

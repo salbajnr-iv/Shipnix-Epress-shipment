@@ -2,40 +2,53 @@ import Link from 'next/link';
 import Header from '@/components/header';
 import ContactForm from '@/components/contact-form';
 import { Mail, MessageCircle, Phone, MapPin, Clock, Sparkles } from 'lucide-react';
+import { MaintenanceScreen, FeatureDisabledScreen } from '@/components/maintenance-screen';
+import { publicConfig } from '@/lib/site-config';
+import { getSiteConfig } from '@/lib/site-config.server';
 
 export const metadata = {
   title: 'Contact Us — Shipnix Express Shipment',
   description: 'Get in touch with Shipnix Express Shipment — email, WhatsApp, phone, or send us a message.',
 };
 
-const CHANNELS = [
-  {
-    icon: Mail,
-    title: 'Email Us',
-    value: 'support@shipnix-express.com',
-    href: 'mailto:support@shipnix-express.com',
-    gradient: 'from-indigo-500 to-violet-600',
-  },
-  {
-    icon: MessageCircle,
-    title: 'WhatsApp',
-    value: '+1 (409) 382-3874',
-    href: 'https://wa.me/14093823874',
-    gradient: 'from-emerald-500 to-teal-600',
-  },
-  {
-    icon: Phone,
-    title: 'Call Us',
-    value: '+1 (800) SHIPNIX',
-    href: 'tel:+18007447649',
-    gradient: 'from-cyan-500 to-sky-600',
-  },
-];
+export default async function ContactPage() {
+  const config = publicConfig(await getSiteConfig());
+  const { contact, announcement, feature_flags: flags } = config;
 
-export default function ContactPage() {
+  if (flags.maintenance_mode) {
+    return <MaintenanceScreen message={flags.maintenance_message} />;
+  }
+  if (!flags.contact_enabled) {
+    return <FeatureDisabledScreen title="Contact is currently unavailable" />;
+  }
+
+  const channels = [
+    {
+      icon: Mail,
+      title: 'Email Us',
+      value: contact.email,
+      href: `mailto:${contact.email}`,
+      gradient: 'from-indigo-500 to-violet-600',
+    },
+    {
+      icon: MessageCircle,
+      title: 'WhatsApp',
+      value: contact.whatsapp_label,
+      href: contact.whatsapp_url,
+      gradient: 'from-emerald-500 to-teal-600',
+    },
+    {
+      icon: Phone,
+      title: 'Call Us',
+      value: contact.phone,
+      href: contact.phone_href,
+      gradient: 'from-cyan-500 to-sky-600',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <Header />
+      <Header contact={contact} announcement={announcement} flags={flags} />
 
       {/* Hero */}
       <section className="relative py-20 px-4 overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-700 to-cyan-600 text-white">
@@ -48,11 +61,11 @@ export default function ContactPage() {
             <Sparkles className="w-4 h-4 text-amber-300" /> Get in Touch
           </div>
           <h1 className="text-4xl md:text-6xl font-extrabold mb-5 tracking-tight">
-            We're here to{' '}
+            We&apos;re here to{' '}
             <span className="bg-gradient-to-r from-amber-300 to-cyan-200 bg-clip-text text-transparent">help</span>
           </h1>
           <p className="text-lg md:text-xl text-indigo-100 max-w-2xl mx-auto">
-            Whether you have a question about a shipment, need a custom quote, or want to partner — we'd love to hear from you.
+            Whether you have a question about a shipment, need a custom quote, or want to partner — we&apos;d love to hear from you.
           </p>
         </div>
       </section>
@@ -60,7 +73,7 @@ export default function ContactPage() {
       {/* Channels */}
       <section className="py-16 px-4 -mt-12 relative z-10">
         <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
-          {CHANNELS.map(({ icon: Icon, title, value, href, gradient }, i) => (
+          {channels.map(({ icon: Icon, title, value, href, gradient }, i) => (
             <a
               key={title}
               href={href}
@@ -98,9 +111,9 @@ export default function ContactPage() {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Headquarters</h3>
                 <p className="text-indigo-100 leading-relaxed">
-                  100 Logistics Way<br />
-                  Suite 4200<br />
-                  London, UK EC1A 1BB
+                  {contact.address_line1}<br />
+                  {contact.address_line2}<br />
+                  {contact.address_city}
                 </p>
               </div>
             </div>
@@ -111,9 +124,9 @@ export default function ContactPage() {
               </div>
               <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Business Hours</h3>
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <li className="flex justify-between"><span>Monday – Friday</span><span className="font-medium">8:00 – 20:00</span></li>
-                <li className="flex justify-between"><span>Saturday</span><span className="font-medium">9:00 – 17:00</span></li>
-                <li className="flex justify-between"><span>Sunday</span><span className="font-medium">Closed</span></li>
+                <li className="flex justify-between"><span>Monday – Friday</span><span className="font-medium">{contact.hours_weekday}</span></li>
+                <li className="flex justify-between"><span>Saturday</span><span className="font-medium">{contact.hours_saturday}</span></li>
+                <li className="flex justify-between"><span>Sunday</span><span className="font-medium">{contact.hours_sunday}</span></li>
               </ul>
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400">
                 Tracking and online support available 24/7.
@@ -124,7 +137,7 @@ export default function ContactPage() {
               <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">Need urgent help?</h3>
               <p className="text-gray-600 dark:text-gray-300 mb-4">Reach us instantly on WhatsApp.</p>
               <Link
-                href="https://wa.me/14093823874"
+                href={contact.whatsapp_url}
                 className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-full font-medium transition-colors hover:scale-105 transform duration-200"
                 data-testid="link-contact-whatsapp"
               >

@@ -1,75 +1,40 @@
 import Link from 'next/link';
 import Header from '@/components/header';
 import { Button } from '@/components/ui/button';
-import {
-  Zap,
-  Truck,
-  Warehouse,
-  Plane,
-  Ship,
-  Package,
-  ArrowRight,
-  CheckCircle2,
-  Globe2,
-  ShieldCheck,
-  Clock,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle2, Globe2, ShieldCheck, Clock, Sparkles } from 'lucide-react';
+import { MaintenanceScreen, FeatureDisabledScreen } from '@/components/maintenance-screen';
+import { publicConfig } from '@/lib/site-config';
+import { getSiteConfig } from '@/lib/site-config.server';
+import { getIcon } from '@/lib/icon-map';
 
 export const metadata = {
   title: 'Services — Shipnix Express Shipment',
   description: 'Express, ground, freight, air, and sea — comprehensive logistics solutions for every shipment.',
 };
 
-const SERVICES = [
-  {
-    icon: Zap,
-    title: 'Express Delivery',
-    desc: 'Time-definite, next-business-day shipping for urgent shipments.',
-    features: ['Next business day', 'Time-definite delivery', 'Money-back guarantee', 'Priority handling'],
-    gradient: 'from-indigo-500 to-violet-600',
-  },
-  {
-    icon: Truck,
-    title: 'Ground Shipping',
-    desc: 'Reliable and economical ground delivery across the country.',
-    features: ['1-5 business days', 'Residential & commercial', 'Affordable rates', 'Real-time tracking'],
-    gradient: 'from-cyan-500 to-sky-600',
-  },
-  {
-    icon: Warehouse,
-    title: 'Freight & LTL',
-    desc: 'Less-than-truckload and full-truckload freight solutions.',
-    features: ['LTL & FTL', 'Liftgate service', 'Inside delivery', 'Specialized handling'],
-    gradient: 'from-amber-500 to-orange-500',
-  },
-  {
-    icon: Plane,
-    title: 'Air Freight',
-    desc: 'High-speed international air freight for time-sensitive cargo.',
-    features: ['Worldwide coverage', 'Customs clearance', 'Door-to-door', 'Express air'],
-    gradient: 'from-violet-500 to-fuchsia-600',
-  },
-  {
-    icon: Ship,
-    title: 'Sea Freight',
-    desc: 'Cost-effective ocean shipping for large and bulk cargo.',
-    features: ['FCL & LCL', 'Container shipping', 'Port-to-port', 'Bulk handling'],
-    gradient: 'from-sky-500 to-blue-700',
-  },
-  {
-    icon: Package,
-    title: 'Specialty Packaging',
-    desc: 'Custom packaging and crating for fragile or unique items.',
-    features: ['Custom crates', 'Fragile handling', 'Climate control', 'Hazmat certified'],
-    gradient: 'from-emerald-500 to-teal-600',
-  },
+const GRADIENTS = [
+  'from-indigo-500 to-violet-600',
+  'from-cyan-500 to-sky-600',
+  'from-amber-500 to-orange-500',
+  'from-violet-500 to-fuchsia-600',
+  'from-sky-500 to-blue-700',
+  'from-emerald-500 to-teal-600',
 ];
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const config = publicConfig(await getSiteConfig());
+  const flags = config.feature_flags;
+
+  if (flags.maintenance_mode) {
+    return <MaintenanceScreen message={flags.maintenance_message} />;
+  }
+  if (!flags.services_enabled) {
+    return <FeatureDisabledScreen title="Services overview is currently unavailable" />;
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <Header />
+      <Header contact={config.contact} announcement={config.announcement} flags={flags} />
 
       {/* Hero */}
       <section className="relative py-20 px-4 overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-700 to-cyan-600 text-white">
@@ -96,34 +61,44 @@ export default function ServicesPage() {
       {/* Service Cards */}
       <section className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SERVICES.map(({ icon: Icon, title, desc, features, gradient }, i) => (
-              <div
-                key={title}
-                className="group relative bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 animate-fade-in-up"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-5 shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all`}>
-                  <Icon className="w-8 h-8 text-white" strokeWidth={2} />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">{title}</h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-5">{desc}</p>
-                <ul className="space-y-2 mb-6">
-                  {features.map(f => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/quote">
-                  <Button variant="outline" className="w-full rounded-full border-gray-200 dark:border-gray-700 group-hover:border-indigo-500 group-hover:text-indigo-600 transition-colors">
-                    Get a Quote <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-            ))}
-          </div>
+          {config.services.length === 0 ? (
+            <p className="text-center text-gray-500 dark:text-gray-400">No services have been published yet.</p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {config.services.map((s, i) => {
+                const Icon = getIcon(s.icon);
+                const gradient = GRADIENTS[i % GRADIENTS.length];
+                return (
+                  <div
+                    key={`${s.title}-${i}`}
+                    className="group relative bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 animate-fade-in-up"
+                    style={{ animationDelay: `${i * 100}ms` }}
+                  >
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-5 shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all`}>
+                      <Icon className="w-8 h-8 text-white" strokeWidth={2} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">{s.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-5">{s.description}</p>
+                    <ul className="space-y-2 mb-6">
+                      {s.bullets.map(f => (
+                        <li key={f} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {flags.quote_enabled && (
+                      <Link href="/quote">
+                        <Button variant="outline" className="w-full rounded-full border-gray-200 dark:border-gray-700 group-hover:border-indigo-500 group-hover:text-indigo-600 transition-colors">
+                          Get a Quote <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -169,16 +144,20 @@ export default function ServicesPage() {
               <h2 className="text-3xl md:text-4xl font-extrabold mb-4">Need a custom solution?</h2>
               <p className="text-indigo-100 text-lg mb-6">Talk to our logistics specialists today.</p>
               <div className="flex flex-wrap gap-3 justify-center">
-                <Link href="/quote">
-                  <Button size="lg" className="rounded-full bg-amber-400 hover:bg-amber-300 text-indigo-900 hover:scale-105 transition-all shadow-xl px-7 font-semibold">
-                    Get a Quote
-                  </Button>
-                </Link>
-                <Link href="/contact">
-                  <Button size="lg" variant="outline" className="rounded-full border-white/40 bg-white/10 backdrop-blur text-white hover:bg-white/20 px-7">
-                    Talk to an Expert
-                  </Button>
-                </Link>
+                {flags.quote_enabled && (
+                  <Link href="/quote">
+                    <Button size="lg" className="rounded-full bg-amber-400 hover:bg-amber-300 text-indigo-900 hover:scale-105 transition-all shadow-xl px-7 font-semibold">
+                      Get a Quote
+                    </Button>
+                  </Link>
+                )}
+                {flags.contact_enabled && (
+                  <Link href="/contact">
+                    <Button size="lg" variant="outline" className="rounded-full border-white/40 bg-white/10 backdrop-blur text-white hover:bg-white/20 px-7">
+                      Talk to an Expert
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
+import { getSiteConfig } from '@/lib/site-config.server';
 
 function generateQuoteNumber() {
   return `QT-${Date.now().toString().slice(-8)}`;
@@ -26,15 +27,35 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const body = await req.json();
 
+  // Honor maintenance + feature-flag toggles set in the admin Customization console.
+  const config = await getSiteConfig();
+  if (config.feature_flags.maintenance_mode) {
+    return NextResponse.json(
+      { message: config.feature_flags.maintenance_message || 'Service is temporarily unavailable.' },
+      { status: 503 },
+    );
+  }
+  if (!config.feature_flags.quote_enabled) {
+    return NextResponse.json(
+      { message: 'Quote requests are currently disabled.' },
+      { status: 403 },
+    );
+  }
+
   const validUntil = new Date();
   validUntil.setDate(validUntil.getDate() + 30);
 
+  // Pricing math comes straight from site_settings — admins can change it live.
+  const { base_min, per_kg_rate } = config.pricing;
   const weight = parseFloat(body.weight || '0');
-  const baseCost = Math.max(15, weight * 8.5);
-  const deliveryFee = body.delivery_time_slot === 'afternoon' ? 5
-    : body.delivery_time_slot === 'evening' ? 15
-    : body.delivery_time_slot === 'express' ? 25
-    : body.delivery_time_slot === 'weekend' ? 20 : 0;
+  const baseCost = Math.max(base_min, weight * per_kg_rate);
+
+  // Look up the chosen slot's fee from the configured slot list (enabled-only).
+  const slot = config.time_slots.find(
+    (s) => s.enabled && s.value === body.delivery_time_slot,
+  );
+  const deliveryFee = slot?.fee ?? 0;
+
   const totalCost = baseCost + deliveryFee;
 
   const { data: { user } } = await supabase.auth.getUser();

@@ -2,28 +2,61 @@
 
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
-import { Sun, Moon, Search, Globe, Mail, MessageCircle, Menu, X } from 'lucide-react';
+import { Sun, Moon, Search, Globe, Mail, MessageCircle, Menu, X, Megaphone, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { DEFAULT_CONFIG, type ContactConfig, type AnnouncementConfig, type FeatureFlags } from '@/lib/site-config';
 
 const NAV_LINKS = [
-  { href: '/track', label: 'Track' },
-  { href: '/services', label: 'Services' },
-  { href: '/quote', label: 'Get Quote' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
-  { href: '/faq', label: 'Support' },
+  { href: '/track',    label: 'Track',     flag: 'tracking_enabled' as const },
+  { href: '/services', label: 'Services',  flag: 'services_enabled' as const },
+  { href: '/quote',    label: 'Get Quote', flag: 'quote_enabled' as const },
+  { href: '/about',    label: 'About',     flag: null },
+  { href: '/contact',  label: 'Contact',   flag: 'contact_enabled' as const },
+  { href: '/faq',      label: 'Support',   flag: 'faq_enabled' as const },
 ];
 
-export default function Header() {
+export type HeaderProps = {
+  contact?: ContactConfig;
+  announcement?: AnnouncementConfig;
+  flags?: FeatureFlags;
+};
+
+export default function Header({ contact, announcement, flags }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
+  const c = contact ?? DEFAULT_CONFIG.contact;
+  const a = announcement ?? DEFAULT_CONFIG.announcement;
+  const f = flags ?? DEFAULT_CONFIG.feature_flags;
+
+  const visibleLinks = NAV_LINKS.filter((l) => !l.flag || f[l.flag]);
+
   return (
     <header className="sticky top-0 z-50 border-b bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
+      {/* Announcement Banner */}
+      {a.enabled && a.message && (
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white text-sm">
+          <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-2 flex-wrap text-center">
+            <Megaphone className="w-4 h-4 shrink-0" />
+            <span className="font-medium">{a.message}</span>
+            {a.link && a.link_label && (
+              <Link
+                href={a.link}
+                className="inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80"
+                data-testid="link-announcement"
+              >
+                {a.link_label}
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Top Utility Bar */}
       <div className="bg-gradient-to-r from-indigo-50 via-sky-50 to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 py-2 border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
@@ -32,21 +65,25 @@ export default function Header() {
             <span>English (US)</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <Link href="/contact" className="hidden sm:inline text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-              Contact
-            </Link>
-            <Link href="/track" className="hidden md:inline text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-              Find Locations
-            </Link>
+            {f.contact_enabled && (
+              <Link href="/contact" className="hidden sm:inline text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                Contact
+              </Link>
+            )}
+            {f.tracking_enabled && (
+              <Link href="/track" className="hidden md:inline text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                Find Locations
+              </Link>
+            )}
             <a
-              href="mailto:support@shipnix-express.com"
+              href={`mailto:${c.email}`}
               className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-full text-xs hover:bg-indigo-700 hover:scale-105 transition-all shadow-sm"
               data-testid="link-email-support"
             >
               <Mail className="w-3 h-3" /> Email
             </a>
             <a
-              href="https://wa.me/14093823874"
+              href={c.whatsapp_url}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 bg-emerald-500 text-white px-3 py-1.5 rounded-full text-xs hover:bg-emerald-600 hover:scale-105 transition-all shadow-sm"
@@ -77,7 +114,7 @@ export default function Header() {
         </Link>
 
         <nav className="hidden lg:flex items-center gap-1">
-          {NAV_LINKS.map(link => {
+          {visibleLinks.map(link => {
             const active = pathname === link.href;
             return (
               <Link
@@ -118,15 +155,17 @@ export default function Header() {
             <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
 
-          <Link href="/quote" className="hidden sm:block">
-            <Button
-              size="sm"
-              className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-md shadow-indigo-500/30 hover:shadow-lg hover:scale-105 transition-all px-5"
-              data-testid="button-get-started"
-            >
-              Get a Quote
-            </Button>
-          </Link>
+          {f.quote_enabled && (
+            <Link href="/quote" className="hidden sm:block">
+              <Button
+                size="sm"
+                className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-md shadow-indigo-500/30 hover:shadow-lg hover:scale-105 transition-all px-5"
+                data-testid="button-get-started"
+              >
+                Get a Quote
+              </Button>
+            </Link>
+          )}
 
           <Button
             variant="ghost"
@@ -145,7 +184,7 @@ export default function Header() {
       {mobileOpen && (
         <div className="lg:hidden border-t bg-white dark:bg-gray-950 animate-fade-in">
           <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
-            {NAV_LINKS.map(link => (
+            {visibleLinks.map(link => (
               <Link
                 key={link.href}
                 href={link.href}

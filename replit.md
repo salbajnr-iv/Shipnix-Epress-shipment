@@ -29,6 +29,12 @@ Preferred communication style: Simple, everyday language.
 - `tailwind.config.ts` — Tailwind configuration
 - `next.config.mjs` — Next.js configuration (ESM; required because package.json has `"type": "module"`)
 - `supabase-setup.sql` — SQL to run in Supabase dashboard to create tables
+- `supabase-cms-migration.sql` — SQL to run for the admin CMS (`site_settings` table + seeds)
+- `lib/site-config.ts` — Pure types, defaults, and the `publicConfig` filter (client-safe)
+- `lib/site-config.server.ts` — `getSiteConfig()` server-only fetcher (uses `next/headers`)
+- `lib/icon-map.ts` — Whitelisted lucide icons admins can pick for service cards
+- `components/customization-client.tsx` — Admin Customization tabs (Site Content / Pricing / Services / FAQ / Features)
+- `components/maintenance-screen.tsx` — Friendly screens shown when a feature flag is off or maintenance mode is on
 
 ### API Routes
 All API routes live in `app/api/`. Admin routes use `requireAdmin()` from `lib/auth.ts` to check the role on the `profiles` table.
@@ -43,6 +49,9 @@ All API routes live in `app/api/`. Admin routes use `requireAdmin()` from `lib/a
 - `GET /api/admin/stats` — Aggregated dashboard stats + recent activity (admin)
 - `GET /api/track/[id]` — Public tracking endpoint (no auth required)
 - `GET /api/auth/callback` — Supabase OAuth callback
+- `GET /api/public-config` — Public-facing site settings (enabled-only items)
+- `GET /api/site-settings` — Admin: full settings dump including disabled items
+- `PUT /api/site-settings/[key]` — Admin: upsert one setting key (RLS also enforces admin-only writes)
 
 ### Auth & Roles
 - `profiles` table (1:1 with `auth.users`) stores `role` (`customer` | `admin`).
@@ -53,6 +62,7 @@ All API routes live in `app/api/`. Admin routes use `requireAdmin()` from `lib/a
 - Make a user an admin by running in the Supabase SQL Editor:
   `update profiles set role = 'admin' where email = 'you@example.com';`
 - For an existing project, run `supabase-migration-rls-lockdown.sql` to apply just the RLS lockdown without re-creating tables.
+- The admin CMS adds a `site_settings` table with its own RLS: public SELECT, admin-only INSERT/UPDATE/DELETE via the existing `public.is_admin()` helper.
 
 ### Package Status State Machine
 `PACKAGE_STATUS_TRANSITIONS` in `lib/types.ts` defines which status can follow which. The `/api/packages/[id]/status` endpoint and the package management UI both enforce it. Terminal states: `delivered`, `returned`.
@@ -74,6 +84,23 @@ All API routes live in `app/api/`. Admin routes use `requireAdmin()` from `lib/a
 - `/admin/packages` — Package management (protected)
 - `/admin/quotes` — Quote management (protected)
 - `/admin/invoices` — Invoice management (protected)
+- `/admin/customization` — Site CMS: hero, contact, announcement, FAQ, services, pricing, time slots, feature flags & maintenance mode (protected)
+
+### Admin CMS (Customization)
+The admin Customization page (`/admin/customization`) lets admins control what regular visitors see — without redeploying. Settings are stored as JSONB in the `site_settings` table (key-value), with public read + admin-only write enforced by RLS.
+
+- **Hero** — title prefix, rotating words, subtitle, both CTAs, and the two trust badges.
+- **Announcement banner** — sitewide banner (toggle, message, optional link).
+- **Contact info** — email, phone, WhatsApp, address, business hours; rendered on `/contact`, in the header utility bar, and in the footer.
+- **Pricing** — `base_min` and `per_kg_rate` used by the public quote API. The math is `total = max(base_min, weight × per_kg_rate) + slot.fee`.
+- **Time slots** — list of delivery slots (value, label, fee, enabled) shown on the quote form. The fee is added server-side from `/api/quotes`.
+- **Services** — cards displayed on the homepage and `/services`. Each has a title, description, bullets, lucide icon (whitelisted in `lib/icon-map.ts`), and an enabled flag.
+- **FAQ** — questions/answers shown on `/faq` (enabled-only).
+- **Feature flags** — page toggles (`quote`, `register`, `tracking`, `faq`, `contact`, `services`) plus `maintenance_mode` and `maintenance_message`. Disabled pages render a friendly notice (not a 404). Maintenance mode shows a sitewide screen on every public page.
+
+Server pages call `getSiteConfig()` from `lib/site-config.server.ts`, then pass the relevant slices to client components (`Header`, `LandingPage`, `FAQClient`, etc.). The pricing API (`/api/quotes`) also enforces the maintenance and quote-enabled flags server-side. If the migration hasn't been run yet, every site falls back to `DEFAULT_CONFIG` from `lib/site-config.ts`.
+
+**To enable the CMS**, run `supabase-cms-migration.sql` in the Supabase SQL Editor.
 
 ## Setup Required
 

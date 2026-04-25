@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,23 +14,21 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-
-const TIME_SLOTS = [
-  { value: 'morning', label: 'Morning (8AM - 12PM)', fee: 0 },
-  { value: 'afternoon', label: 'Afternoon (12PM - 5PM)', fee: 5 },
-  { value: 'evening', label: 'Evening (5PM - 8PM)', fee: 15 },
-  { value: 'express', label: 'Express (Same Day)', fee: 25 },
-  { value: 'weekend', label: 'Weekend', fee: 20 },
-];
+import { DEFAULT_CONFIG, type SiteConfig } from '@/lib/site-config';
 
 export default function QuoteRequestClient() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+
+  const { data: cfg } = useQuery<SiteConfig>({ queryKey: ['/api/public-config'] });
+  const TIME_SLOTS = (cfg?.time_slots ?? DEFAULT_CONFIG.time_slots).filter(s => s.enabled);
+  const defaultSlot = TIME_SLOTS[0]?.value ?? 'morning';
+
   const [form, setForm] = useState({
     sender_name: '', sender_email: '', sender_phone: '', sender_address: '',
     recipient_name: '', recipient_email: '', recipient_phone: '', recipient_address: '',
-    package_description: '', weight: '', dimensions: '', delivery_time_slot: 'morning',
+    package_description: '', weight: '', dimensions: '', delivery_time_slot: defaultSlot,
   });
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -220,11 +219,15 @@ export default function QuoteRequestClient() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {TIME_SLOTS.map(s => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label} {s.fee > 0 ? `(+$${s.fee})` : '(free)'}
-                          </SelectItem>
-                        ))}
+                        {TIME_SLOTS.length === 0 ? (
+                          <SelectItem value="morning">Morning</SelectItem>
+                        ) : (
+                          TIME_SLOTS.map(s => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label} {s.fee > 0 ? `(+$${s.fee})` : '(free)'}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

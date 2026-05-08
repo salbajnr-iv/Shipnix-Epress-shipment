@@ -25,7 +25,7 @@ export async function GET() {
 // POST is intentionally public — anyone can request a quote.
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
 
   // Honor maintenance + feature-flag toggles set in the admin Customization console.
   const config = await getSiteConfig();

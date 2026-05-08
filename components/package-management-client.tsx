@@ -15,7 +15,8 @@ import {
   Package, Plus, MapPin, Truck, Copy, Mail, CheckCircle2, Link2, User,
   DollarSign, ArrowRight, Search, ChevronDown, ChevronUp, Clock,
   ClipboardCheck, PackageCheck, Warehouse, AlertTriangle, Filter, X,
-  Calendar, Hash, Phone, RefreshCw,
+  Calendar, Hash, Phone, RefreshCw, Building2, Globe, PenLine,
+  ShieldCheck, CreditCard, PackageOpen,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -69,10 +70,18 @@ const MAIN_FLOW: PackageStatus[] = [
 ];
 
 const EMPTY_FORM = {
-  sender_name: '', sender_address: '', sender_email: '', sender_phone: '',
-  recipient_name: '', recipient_address: '', recipient_email: '', recipient_phone: '',
-  package_description: '', weight: '', dimensions: '', shipping_cost: '',
-  estimated_delivery: '', payment_status: 'paid',
+  // Sender (lean)
+  sender_name: '', sender_phone: '', sender_address: '',
+  // Recipient (structured)
+  recipient_name: '', recipient_email: '', recipient_phone: '',
+  recipient_street: '', recipient_apt: '', recipient_city: '',
+  recipient_state: '', recipient_zip: '', recipient_country: '',
+  delivery_instructions: '', signature_required: false as boolean,
+  // Package
+  package_description: '', package_type: 'parcel', weight: '', dimensions: '',
+  // Shipping
+  shipping_cost: '', payment_method: 'card', payment_status: 'paid',
+  estimated_delivery: '', current_status: 'order_placed', current_location: '',
 };
 
 type TrackingEvent = {
@@ -467,11 +476,31 @@ export default function PackageManagementClient() {
   };
 
   const handleCreate = () => {
-    if (!form.sender_name || !form.sender_address || !form.recipient_name || !form.recipient_address) {
-      toast({ title: 'Validation error', description: 'Sender and recipient name/address are required.', variant: 'destructive' });
+    if (!form.sender_name || !form.sender_address) {
+      toast({ title: 'Validation error', description: 'Sender name and pickup address are required.', variant: 'destructive' });
       return;
     }
-    createMutation.mutate(form);
+    if (!form.recipient_name || !form.recipient_street || !form.recipient_city || !form.recipient_country) {
+      toast({ title: 'Validation error', description: 'Recipient name, street, city and country are required.', variant: 'destructive' });
+      return;
+    }
+    // Compose structured recipient address into a single line
+    const recipientAddress = [
+      form.recipient_street,
+      form.recipient_apt,
+      form.recipient_city,
+      form.recipient_state,
+      form.recipient_zip,
+      form.recipient_country,
+    ].filter(Boolean).join(', ');
+
+    const { recipient_street, recipient_apt, recipient_city, recipient_state, recipient_zip, recipient_country, package_type, current_status, ...rest } = form;
+
+    createMutation.mutate({
+      ...rest,
+      recipient_address: recipientAddress,
+      current_status: current_status || 'order_placed',
+    });
   };
 
   const handleStatusUpdate = () => {
@@ -529,74 +558,233 @@ export default function PackageManagementClient() {
                 <Plus className="w-4 h-4 mr-1.5" />New Package
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0">
-              <DialogHeader className="p-6 pb-4 border-b border-slate-200 dark:border-slate-800">
-                <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white">Create New Package</DialogTitle>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0">
+              <DialogHeader className="p-6 pb-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+                <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                    <PackageOpen className="w-4 h-4 text-white" />
+                  </div>
+                  Create New Shipment
+                </DialogTitle>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  A tracking ID and QR code will be generated automatically.
+                  A unique tracking ID and QR code will be generated automatically.
                 </p>
               </DialogHeader>
-              <div className="p-6">
-                <FormSection step={1} title="Sender Details" icon={User}>
+
+              <div className="p-6 space-y-0">
+
+                {/* ── Section 1: Sender ── */}
+                <FormSection step={1} title="Sender (Pickup)" icon={User}>
                   <div className="form-grid">
-                    <Field label="Sender Name *">
+                    <Field label="Full Name *">
                       <Input value={form.sender_name} onChange={setF('sender_name')} placeholder="Jane Doe" data-testid="input-sender-name" />
                     </Field>
-                    <Field label="Sender Email">
-                      <Input value={form.sender_email} onChange={setF('sender_email')} placeholder="jane@company.com" data-testid="input-sender-email" />
+                    <Field label="Phone Number">
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Input value={form.sender_phone} onChange={setF('sender_phone')} placeholder="+1 (555) 000-0000" className="pl-9" data-testid="input-sender-phone" />
+                      </div>
                     </Field>
-                    <Field label="Sender Phone" full>
-                      <Input value={form.sender_phone} onChange={setF('sender_phone')} placeholder="+1 (555) 000-0000" data-testid="input-sender-phone" />
-                    </Field>
-                    <Field label="Sender Address *" full>
-                      <Textarea value={form.sender_address} onChange={setF('sender_address')} rows={2} placeholder="Street, city, postal code" data-testid="input-sender-address" />
+                    <Field label="Pickup Address *" full>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 w-3.5 h-3.5 text-slate-400" />
+                        <Textarea value={form.sender_address} onChange={setF('sender_address')} rows={2} placeholder="Full pickup address including city, state and postal code" className="pl-9 resize-none" data-testid="input-sender-address" />
+                      </div>
                     </Field>
                   </div>
                 </FormSection>
-                <FormSection step={2} title="Recipient Details" icon={MapPin}>
-                  <div className="form-grid">
-                    <Field label="Recipient Name *">
+
+                {/* ── Section 2: Recipient ── */}
+                <FormSection step={2} title="Recipient & Delivery Address" icon={MapPin}>
+                  {/* Contact info */}
+                  <div className="form-grid mb-4">
+                    <Field label="Full Name *">
                       <Input value={form.recipient_name} onChange={setF('recipient_name')} placeholder="John Smith" data-testid="input-recipient-name" />
                     </Field>
-                    <Field label="Recipient Email">
-                      <Input value={form.recipient_email} onChange={setF('recipient_email')} placeholder="john@example.com" data-testid="input-recipient-email" />
+                    <Field label="Email Address *">
+                      <Input type="email" value={form.recipient_email} onChange={setF('recipient_email')} placeholder="john@example.com" data-testid="input-recipient-email" />
                     </Field>
-                    <Field label="Recipient Phone" full>
-                      <Input value={form.recipient_phone} onChange={setF('recipient_phone')} placeholder="+1 (555) 000-0000" data-testid="input-recipient-phone" />
-                    </Field>
-                    <Field label="Recipient Address *" full>
-                      <Textarea value={form.recipient_address} onChange={setF('recipient_address')} rows={2} placeholder="Street, city, postal code" data-testid="input-recipient-address" />
+                    <Field label="Phone Number *" full>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Input value={form.recipient_phone} onChange={setF('recipient_phone')} placeholder="+1 (555) 000-0000" className="pl-9" data-testid="input-recipient-phone" />
+                      </div>
                     </Field>
                   </div>
+
+                  {/* Structured address */}
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-3">
+                    <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      <Building2 className="w-3 h-3" /> Delivery Address
+                    </p>
+                    <div className="form-grid">
+                      <Field label="Street Address *" full>
+                        <Input value={form.recipient_street} onChange={setF('recipient_street')} placeholder="123 Main Street" data-testid="input-recipient-street" />
+                      </Field>
+                      <Field label="Apt / Suite / Floor">
+                        <Input value={form.recipient_apt} onChange={setF('recipient_apt')} placeholder="Apt 4B (optional)" data-testid="input-recipient-apt" />
+                      </Field>
+                      <Field label="City *">
+                        <Input value={form.recipient_city} onChange={setF('recipient_city')} placeholder="New York" data-testid="input-recipient-city" />
+                      </Field>
+                      <Field label="State / Province">
+                        <Input value={form.recipient_state} onChange={setF('recipient_state')} placeholder="NY" data-testid="input-recipient-state" />
+                      </Field>
+                      <Field label="Postal Code">
+                        <Input value={form.recipient_zip} onChange={setF('recipient_zip')} placeholder="10001" data-testid="input-recipient-zip" />
+                      </Field>
+                      <Field label="Country *">
+                        <div className="relative">
+                          <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                          <Input value={form.recipient_country} onChange={setF('recipient_country')} placeholder="United States" className="pl-9" data-testid="input-recipient-country" />
+                        </div>
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* Delivery options */}
+                  <div className="mt-4 space-y-3">
+                    <Field label="Delivery Instructions" full>
+                      <div className="relative">
+                        <PenLine className="absolute left-3 top-3 w-3.5 h-3.5 text-slate-400" />
+                        <Textarea
+                          value={form.delivery_instructions}
+                          onChange={setF('delivery_instructions')}
+                          rows={2}
+                          placeholder="e.g. Leave with doorman, ring buzzer #42, do not leave without signature…"
+                          className="pl-9 resize-none"
+                          data-testid="input-delivery-instructions"
+                        />
+                      </div>
+                    </Field>
+                    <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+                      <div className="relative flex-shrink-0 mt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={form.signature_required}
+                          onChange={e => setForm(f => ({ ...f, signature_required: e.target.checked }))}
+                          className="sr-only peer"
+                          data-testid="input-signature-required"
+                        />
+                        <div className="w-5 h-5 rounded border-2 border-slate-300 dark:border-slate-600 peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-all flex items-center justify-center">
+                          {form.signature_required && <CheckCircle2 className="w-3 h-3 text-white" />}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> Signature Required
+                        </span>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Recipient must sign upon delivery. Suitable for high-value or sensitive items.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
                 </FormSection>
+
+                {/* ── Section 3: Package ── */}
                 <FormSection step={3} title="Package Details" icon={Package}>
                   <div className="form-grid">
-                    <Field label="Description" full>
-                      <Textarea value={form.package_description} onChange={setF('package_description')} rows={2} placeholder="e.g. Electronics, fragile" data-testid="input-description" />
+                    <Field label="Package Type" full>
+                      <Select value={form.package_type} onValueChange={v => setForm(f => ({ ...f, package_type: v }))}>
+                        <SelectTrigger className="h-10 rounded-lg border-slate-300 dark:border-slate-700" data-testid="select-package-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="parcel">📦 Parcel / Box</SelectItem>
+                          <SelectItem value="envelope">✉️ Document / Envelope</SelectItem>
+                          <SelectItem value="pallet">🪵 Pallet / Freight</SelectItem>
+                          <SelectItem value="fragile">⚠️ Fragile Item</SelectItem>
+                          <SelectItem value="oversized">📐 Oversized</SelectItem>
+                          <SelectItem value="perishable">🌡️ Perishable / Cold Chain</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Contents / Description">
+                      <Input value={form.package_description} onChange={setF('package_description')} placeholder="e.g. Laptop, clothing, documents" data-testid="input-description" />
                     </Field>
                     <Field label="Weight (kg)">
-                      <Input type="number" value={form.weight} onChange={setF('weight')} placeholder="2.5" data-testid="input-weight" />
+                      <div className="relative">
+                        <Input type="number" min="0" step="0.1" value={form.weight} onChange={setF('weight')} placeholder="2.5" data-testid="input-weight" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">kg</span>
+                      </div>
                     </Field>
-                    <Field label="Dimensions">
-                      <Input value={form.dimensions} onChange={setF('dimensions')} placeholder="L × W × H cm" data-testid="input-dimensions" />
-                    </Field>
-                    <Field label="Shipping Cost ($)">
-                      <Input type="number" value={form.shipping_cost} onChange={setF('shipping_cost')} placeholder="29.99" data-testid="input-shipping-cost" />
-                    </Field>
-                    <Field label="Estimated Delivery">
-                      <Input type="date" value={form.estimated_delivery} onChange={setF('estimated_delivery')} data-testid="input-estimated-delivery" />
+                    <Field label="Dimensions (cm)">
+                      <Input value={form.dimensions} onChange={setF('dimensions')} placeholder="L × W × H" data-testid="input-dimensions" />
                     </Field>
                   </div>
                 </FormSection>
-                <div className="flex gap-3 mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
-                  <Button variant="outline" onClick={() => setShowCreate(false)} className="rounded-xl h-11">Cancel</Button>
+
+                {/* ── Section 4: Shipping & Payment ── */}
+                <FormSection step={4} title="Shipping & Payment" icon={CreditCard} last>
+                  <div className="form-grid">
+                    <Field label="Shipping Cost ($)">
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Input type="number" min="0" step="0.01" value={form.shipping_cost} onChange={setF('shipping_cost')} placeholder="29.99" className="pl-9" data-testid="input-shipping-cost" />
+                      </div>
+                    </Field>
+                    <Field label="Payment Method">
+                      <Select value={form.payment_method} onValueChange={v => setForm(f => ({ ...f, payment_method: v }))}>
+                        <SelectTrigger className="h-10 rounded-lg border-slate-300 dark:border-slate-700" data-testid="select-payment-method">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="card">💳 Credit / Debit Card</SelectItem>
+                          <SelectItem value="cash">💵 Cash on Delivery</SelectItem>
+                          <SelectItem value="bank_transfer">🏦 Bank Transfer</SelectItem>
+                          <SelectItem value="invoice">🧾 Invoice (Net 30)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Payment Status">
+                      <Select value={form.payment_status} onValueChange={v => setForm(f => ({ ...f, payment_status: v }))}>
+                        <SelectTrigger className="h-10 rounded-lg border-slate-300 dark:border-slate-700" data-testid="select-payment-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="paid">✅ Paid</SelectItem>
+                          <SelectItem value="pending">⏳ Pending</SelectItem>
+                          <SelectItem value="overdue">🚨 Overdue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Estimated Delivery">
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Input type="date" value={form.estimated_delivery} onChange={setF('estimated_delivery')} className="pl-9" data-testid="input-estimated-delivery" />
+                      </div>
+                    </Field>
+                    <Field label="Initial Status">
+                      <Select value={form.current_status} onValueChange={v => setForm(f => ({ ...f, current_status: v }))}>
+                        <SelectTrigger className="h-10 rounded-lg border-slate-300 dark:border-slate-700" data-testid="select-initial-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MAIN_FLOW.map(s => (
+                            <SelectItem key={s} value={s}>{formatStatus(s)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Current Location">
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Input value={form.current_location} onChange={setF('current_location')} placeholder="e.g. Los Angeles Hub" className="pl-9" data-testid="input-current-location" />
+                      </div>
+                    </Field>
+                  </div>
+                </FormSection>
+
+                <div className="flex gap-3 pt-5 border-t border-slate-200 dark:border-slate-800">
+                  <Button variant="outline" onClick={() => { setShowCreate(false); setForm(EMPTY_FORM); }} className="rounded-xl h-11">Cancel</Button>
                   <Button
                     onClick={handleCreate}
                     className="flex-1 h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md shadow-indigo-500/25"
                     disabled={createMutation.isPending}
                     data-testid="button-submit-package"
                   >
-                    {createMutation.isPending ? 'Creating…' : 'Create Package & Generate Tracking ID'}
+                    {createMutation.isPending ? 'Creating…' : 'Create Shipment & Generate Tracking ID'}
                     {!createMutation.isPending && <ArrowRight className="w-4 h-4 ml-2" />}
                   </Button>
                 </div>
@@ -937,9 +1125,9 @@ export default function PackageManagementClient() {
 
 /* ─────────────────────────────────────────────── sub-components ── */
 
-function FormSection({ step, title, icon: Icon, children }: { step: number; title: string; icon: any; children: React.ReactNode }) {
+function FormSection({ step, title, icon: Icon, children, last }: { step: number; title: string; icon: any; children: React.ReactNode; last?: boolean }) {
   return (
-    <div className="form-section">
+    <div className={`form-section ${last ? 'border-b-0 pb-0' : ''}`}>
       <div className="form-section-title">
         <span className="form-section-step">{step}</span>
         <div className="flex items-center gap-2">
